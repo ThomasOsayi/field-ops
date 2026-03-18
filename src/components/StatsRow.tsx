@@ -14,7 +14,6 @@ export default function StatsRow({ jobs }: StatsRowProps) {
 
   const stats = [
     {
-      color: 'blue',
       topColor: 'linear-gradient(135deg, #4C9EEB, #7B61FF)',
       iconBg: 'var(--accent-glow)',
       iconColor: 'var(--accent)',
@@ -22,16 +21,15 @@ export default function StatsRow({ jobs }: StatsRowProps) {
       value: active,
       valueColor: 'var(--text-primary)',
       delta: '↑ 3 from last week',
-      deltaType: 'up',
+      deltaType: 'up' as const,
       icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
           <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
         </svg>
       ),
     },
     {
-      color: 'yellow',
       topColor: 'var(--warning)',
       iconBg: 'var(--warning-muted)',
       iconColor: 'var(--warning)',
@@ -39,15 +37,14 @@ export default function StatsRow({ jobs }: StatsRowProps) {
       value: scheduledToday,
       valueColor: 'var(--warning)',
       delta: 'Next at 10:30 AM',
-      deltaType: 'neutral',
+      deltaType: 'neutral' as const,
       icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
       ),
     },
     {
-      color: 'purple',
       topColor: 'var(--purple)',
       iconBg: 'var(--purple-muted)',
       iconColor: 'var(--purple)',
@@ -55,15 +52,14 @@ export default function StatsRow({ jobs }: StatsRowProps) {
       value: inProgress,
       valueColor: 'var(--purple)',
       delta: '2 nearing KTI',
-      deltaType: 'down',
+      deltaType: 'down' as const,
       icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
         </svg>
       ),
     },
     {
-      color: 'green',
       topColor: 'var(--success)',
       iconBg: 'var(--success-muted)',
       iconColor: 'var(--success)',
@@ -71,9 +67,9 @@ export default function StatsRow({ jobs }: StatsRowProps) {
       value: completedWeek,
       valueColor: 'var(--success)',
       delta: '↑ 12% vs last week',
-      deltaType: 'up',
+      deltaType: 'up' as const,
       icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       ),
@@ -87,15 +83,19 @@ export default function StatsRow({ jobs }: StatsRowProps) {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-[14px] mb-7">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '28px' }}>
       {stats.map((s, i) => (
         <div
           key={s.label}
-          className="relative overflow-hidden rounded-[14px] px-5 py-[18px] transition-all duration-200"
           style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 'var(--radius)',
+            padding: '18px 20px',
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
-            animation: `fadeUp 0.4s ease forwards`,
+            transition: 'all 0.2s',
+            animation: 'fadeUp 0.4s ease forwards',
             animationDelay: `${(i + 1) * 0.05}s`,
             opacity: 0,
           }}
@@ -110,21 +110,40 @@ export default function StatsRow({ jobs }: StatsRowProps) {
         >
           {/* Top accent bar */}
           <div
-            className="absolute top-0 left-0 right-0 h-[2px]"
-            style={{ background: s.topColor }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '2px',
+              background: s.topColor,
+            }}
           />
 
           {/* Icon + Label */}
-          <div className="flex items-center justify-between mb-[10px]">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <div
-              className="w-9 h-9 rounded-[10px] flex items-center justify-center"
-              style={{ background: s.iconBg, color: s.iconColor }}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: s.iconBg,
+                color: s.iconColor,
+              }}
             >
               {s.icon}
             </div>
             <div
-              className="text-[12px] font-semibold uppercase tracking-[0.04em]"
-              style={{ color: 'var(--text-muted)' }}
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                color: 'var(--text-muted)',
+              }}
             >
               {s.label}
             </div>
@@ -132,10 +151,13 @@ export default function StatsRow({ jobs }: StatsRowProps) {
 
           {/* Value */}
           <div
-            className="text-[32px] font-bold tracking-tight mb-1"
             style={{
-              fontFamily: 'var(--font-jetbrains-mono)',
+              fontFamily: 'var(--mono)',
+              fontSize: '32px',
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
               color: s.valueColor,
+              marginBottom: '4px',
             }}
           >
             {s.value}
@@ -143,9 +165,10 @@ export default function StatsRow({ jobs }: StatsRowProps) {
 
           {/* Delta */}
           <div
-            className="text-[12px] font-medium"
             style={{
-              fontFamily: 'var(--font-jetbrains-mono)',
+              fontSize: '12px',
+              fontFamily: 'var(--mono)',
+              fontWeight: 500,
               color: deltaColor(s.deltaType),
             }}
           >
