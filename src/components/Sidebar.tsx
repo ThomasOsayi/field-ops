@@ -8,7 +8,7 @@ import { onJobsSnapshot } from '@/lib/jobs';
 import { onNotificationsSnapshot } from '@/lib/notifications';
 import { Job } from '@/types/job';
 
-interface Notif { id: string; read: boolean; [key: string]: unknown; }
+interface Notif { id: string; unread: boolean; [key: string]: unknown; }
 
 const GRADIENT_ACCENT = 'linear-gradient(135deg, #4C9EEB, #7B61FF)';
 
@@ -20,7 +20,7 @@ export default function Sidebar() {
   const { data: notifs } = useFirestore<Notif>(onNotificationsSnapshot as unknown as (cb: (d: Notif[]) => void, err?: (e: Error) => void) => () => void, []);
 
   const activeJobCount = jobs.filter(j => j.status !== 'completed').length || jobs.length;
-  const hasUnread = notifs.some(n => !n.read);
+  const unreadCount = notifs.filter(n => n.unread).length;
 
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'User';
   const initials = displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -35,7 +35,7 @@ export default function Sidebar() {
     { label: 'Calendar', href: '/calendar', icon: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></> },
     { label: 'Contacts', href: '/contacts', icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></> },
     { label: 'Documents', href: '/documents', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></> },
-    { label: 'Notifications', href: '/notifications', dot: hasUnread, icon: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></> },
+    { label: 'Notifications', href: '/notifications', badge: unreadCount > 0 ? String(unreadCount) : undefined, icon: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></> },
   ];
 
   const navSettings = [
@@ -51,8 +51,22 @@ export default function Sidebar() {
       {active && <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '3px', height: '20px', background: GRADIENT_ACCENT, borderRadius: '0 3px 3px 0' }} />}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>{item.icon}</svg>
       {item.label}
-      {item.badge && <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, background: 'var(--accent-glow)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '10px', fontFamily: 'var(--mono)' }}>{item.badge}</span>}
-      {item.dot && <span style={{ marginLeft: 'auto', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--danger)' }} />}
+      {item.badge && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: '11px',
+            fontWeight: 700,
+            background: item.label === 'Notifications' ? 'var(--danger-muted)' : 'var(--accent-glow)',
+            color: item.label === 'Notifications' ? 'var(--danger)' : 'var(--accent)',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontFamily: 'var(--mono)',
+          }}
+        >
+          {item.badge}
+        </span>
+      )}
     </Link>
   );
 
@@ -82,7 +96,7 @@ export default function Sidebar() {
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'pulse 2s infinite', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-bright)' }}>Outlook Synced</div>
-            <div style={{ fontSize: '10px', color: 'var(--accent-dim)', fontFamily: 'var(--mono)' }}>Last: 2m ago</div>
+            <div style={{ fontSize: '10px', color: 'var(--accent-dim)', fontFamily: 'var(--mono)' }}>Connected</div>
           </div>
         </div>
 

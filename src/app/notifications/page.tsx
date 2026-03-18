@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import {
@@ -90,6 +91,7 @@ const dayOrder: ('today' | 'yesterday' | 'earlier')[] = ['today', 'yesterday', '
 export default function NotificationsPage() {
   const { data: notifications } = useFirestore<NotifRecord>(onNotificationsSnapshot, SEED_NOTIFS);
   const [filter, setFilter] = useState('all');
+  const router = useRouter();
 
   const filtered = useMemo(() =>
     filter === 'all' ? notifications : notifications.filter((n) => n.category === filter),
@@ -114,6 +116,31 @@ export default function NotificationsPage() {
     // Skip Firestore write for seed data
     if (notif.id.startsWith('n')) return;
     await toggleNotifRead(notif.id, notif.unread);
+  };
+
+  const handleNotifClick = async (notif: NotifRecord) => {
+    // Mark as read if unread
+    if (notif.unread) {
+      await toggleNotifRead(notif.id, notif.unread);
+    }
+
+    // Navigate based on category
+    switch (notif.category) {
+      case 'job':
+        router.push('/jobs');
+        break;
+      case 'calendar':
+        router.push('/calendar');
+        break;
+      case 'doc':
+        router.push('/documents');
+        break;
+      case 'outlook':
+        router.push('/integrations');
+        break;
+      default:
+        router.push('/jobs');
+    }
   };
 
   const handleMarkAllRead = async () => {
@@ -180,7 +207,7 @@ export default function NotificationsPage() {
                       const ic = notifIconConfig[n.type] ?? notifIconConfig.status;
                       const tag = categoryTagConfig[n.category];
                       return (
-                        <div key={n.id} onClick={() => handleToggleRead(n)} style={{
+                        <div key={n.id} onClick={() => handleNotifClick(n)} style={{
                           display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '16px 18px', marginBottom: '6px',
                           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer', transition: 'all 0.15s',

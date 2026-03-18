@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
 import { Job } from '@/types/job';
 import { onJobsSnapshot } from '@/lib/jobs';
 import { DocRecord, onDocumentsSnapshot, uploadDocument, getDocumentDownloadUrl } from '@/lib/documents';
@@ -9,6 +10,7 @@ import { useFirestore } from '@/hooks/useFirestore';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { db } from '@/lib/firebase';
 
 const typeConfig: Record<string, { label: string; iconBg: string; iconColor: string; previewBg: string; badgeBg: string; badgeColor: string }> = {
   pdf: { label: 'PDF', iconBg: 'var(--danger-muted)', iconColor: 'var(--danger)', previewBg: 'linear-gradient(135deg, rgba(248,113,113,0.08), rgba(248,113,113,0.03))', badgeBg: 'var(--danger-muted)', badgeColor: 'var(--danger)' },
@@ -37,6 +39,7 @@ export default function DocumentsPage() {
   const { data: jobs } = useFirestore<Job>(onJobsSnapshot, []);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Upload
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -67,7 +70,18 @@ export default function DocumentsPage() {
     return () => window.removeEventListener('keydown', h);
   }, [viewerOpen]);
 
-  const filtered = useMemo(() => filter === 'all' ? docs : docs.filter(d => d.type === filter), [docs, filter]);
+  const filtered = useMemo(() => {
+    let result = filter === 'all' ? docs : docs.filter(d => d.type === filter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.jobNumber?.toLowerCase().includes(q) ||
+        d.company?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [docs, filter, searchQuery]);
   const countFor = (v: string) => v === 'all' ? docs.length : docs.filter(d => d.type === v).length;
   const totalStorage = useMemo(() => Math.round(docs.reduce((a, d) => a + (d.sizeBytes || 0), 0) / (1024 * 1024)), [docs]);
 
@@ -101,8 +115,26 @@ export default function DocumentsPage() {
     if (!d.storagePath && !d.storageUrl) return;
     try {
       const url = d.storageUrl || await getDocumentDownloadUrl(d.storagePath);
-      window.open(url, '_blank');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = d.name;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (e) { console.error('Download failed:', e); }
+  };
+
+  const handleLinkJob = async (docRecord: DocRecord, jobValue: string) => {
+    const linkedJobData = jobs.find(j => `${j.jobNumber} — ${j.company}` === jobValue);
+    const updates = {
+      jobNumber: linkedJobData?.jobNumber || '',
+      company: linkedJobData?.company || '',
+    };
+    await updateDoc(doc(db, 'documents', docRecord.id), updates);
+    // Update local preview state
+    setPreviewDoc({ ...docRecord, ...updates });
   };
 
   // Viewer
@@ -126,7 +158,7 @@ export default function DocumentsPage() {
       <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
         <Sidebar />
         <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-          <Topbar onNewJob={() => setUploadOpen(true)} />
+          <Topbar onNewJob={() => setUploadOpen(true)} onSearch={setSearchQuery} buttonLabel="Upload File" />
           <main style={{ padding: '28px 32px', flex: 1 }}>
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '28px' }}>
@@ -260,7 +292,7 @@ export default function DocumentsPage() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '28px' }}>
             <div onClick={() => fileInputRef.current?.click()} onDrop={e => { e.preventDefault(); if (e.dataTransfer.files) setSelectedFiles(Array.from(e.dataTransfer.files)); }} onDragOver={e => e.preventDefault()}
-              style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '48px 32px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', marginBottom: '24px' }}
+              style={{ border: '2px solid var(--border)', borderRadius: 'var(--radius)', padding: '48px 32px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', marginBottom: '24px' }}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--accent-glow)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '40px', height: '40px', color: 'var(--text-muted)', marginBottom: '12px' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -326,13 +358,28 @@ export default function DocumentsPage() {
             )}
             <div style={{ padding: '24px 28px' }}>
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-                {[{ l: 'File Name', v: previewDoc.name }, { l: 'Type', v: (typeConfig[previewDoc.type] ?? typeConfig.doc).label }, { l: 'Size', v: previewDoc.size, m: true }, { l: 'Uploaded', v: formatDate(previewDoc.createdAt), m: true, last: !previewDoc.jobNumber }].map(r => (
+                {[{ l: 'File Name', v: previewDoc.name }, { l: 'Type', v: (typeConfig[previewDoc.type] ?? typeConfig.doc).label }, { l: 'Size', v: previewDoc.size, m: true }, { l: 'Uploaded', v: formatDate(previewDoc.createdAt), m: true, last: false }].map(r => (
                   <div key={r.l} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: r.last ? 'none' : '1px solid var(--border)' }}><span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{r.l}</span><span style={{ fontSize: '13px', fontWeight: 600, fontFamily: r.m ? 'var(--mono)' : undefined }}>{r.v}</span></div>
                 ))}
-                {previewDoc.jobNumber && <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}><span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Linked Job</span><span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--accent)' }}>{previewDoc.jobNumber}</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}><span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Company</span><span style={{ fontSize: '13px', fontWeight: 600 }}>{previewDoc.company}</span></div>
-                </>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Linked Job</span>
+                  <select
+                    value={previewDoc.jobNumber ? `${previewDoc.jobNumber} — ${previewDoc.company}` : ''}
+                    onChange={e => handleLinkJob(previewDoc, e.target.value)}
+                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: 600, color: previewDoc.jobNumber ? 'var(--accent)' : 'var(--text-muted)', outline: 'none', maxWidth: '220px', cursor: 'pointer' }}
+                  >
+                    <option value="">No job linked</option>
+                    {jobs
+                      .slice()
+                      .sort((a, b) => b.jobNumber.localeCompare(a.jobNumber))
+                      .slice(0, 20)
+                      .map(j => (
+                        <option key={j.id} value={`${j.jobNumber} — ${j.company}`}>
+                          {j.jobNumber} — {j.company}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
