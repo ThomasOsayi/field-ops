@@ -10,6 +10,7 @@ import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
 import NewContactPanel from '@/components/NewContactPanel';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 /* ── Seed data ── */
 const SEED_COMPANIES: CompanyRecord[] = [
@@ -101,15 +102,16 @@ export default function ContactsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
-      <Sidebar />
-      <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-        <Topbar onNewJob={handleAddContact} />
-        <main style={{ padding: '28px 32px', flex: 1 }}>
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>Loading…</div>
-          ) : (
-            <>
+    <ProtectedRoute>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+        <Sidebar />
+        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+          <Topbar onNewJob={handleAddContact} />
+          <main style={{ padding: '28px 32px', flex: 1 }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>Loading…</div>
+            ) : (
+              <>
               {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '28px' }}>
                 <ContactStatCard color="blue" label="Total Contacts" value={totalContacts} delta={`${companies.length} companies`} />
@@ -222,7 +224,8 @@ export default function ContactsPage() {
 
       <ContactDetailPanel open={detailOpen} company={selectedCompany} jobs={jobs} onClose={() => setDetailOpen(false)} onEdit={handleEditCompany} onDelete={handleDeleteCompany} onNewJob={() => {}} />
       <NewContactPanel open={formOpen} editingCompany={editingCompany} onClose={() => setFormOpen(false)} onSaved={() => {}} />
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
 

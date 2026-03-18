@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import {
   connectOutlook,
   disconnectOutlookClient,
@@ -114,22 +115,23 @@ export default function IntegrationsPage() {
   );
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
-      <Sidebar />
+    <ProtectedRoute>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+        <Sidebar />
 
-      <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em' }}>Integrations</h1>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Connect FieldOps with your tools</div>
-          </div>
-        </header>
+        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em' }}>Integrations</h1>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>Connect FieldOps with your tools</div>
+            </div>
+          </header>
 
-        <main style={{ padding: '28px 32px', flex: 1 }}>
-          {checking ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)', fontSize: '14px' }}>Checking connection…</div>
-          ) : (
-            <>
+          <main style={{ padding: '28px 32px', flex: 1 }}>
+            {checking ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)', fontSize: '14px' }}>Checking connection…</div>
+            ) : (
+              <>
               {/* Outlook Card */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                 <div
@@ -297,6 +299,7 @@ export default function IntegrationsPage() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -9,6 +9,7 @@ import {
     serverTimestamp,
     onSnapshot,
     Unsubscribe,
+    Timestamp,
   } from 'firebase/firestore';
   import {
     ref,
@@ -43,10 +44,16 @@ import {
   export async function getDocuments(): Promise<DocRecord[]> {
     const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as DocRecord[];
+    return snapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        createdAt: data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt ?? new Date().toISOString(),
+      };
+    }) as DocRecord[];
   }
   
   // ── Real-time listener ──
@@ -58,10 +65,16 @@ import {
     return onSnapshot(
       q,
       (snapshot) => {
-        const docs = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as DocRecord[];
+        const docs = snapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate().toISOString()
+              : data.createdAt ?? new Date().toISOString(),
+          };
+        }) as DocRecord[];
         onData(docs);
       },
       (error) => {

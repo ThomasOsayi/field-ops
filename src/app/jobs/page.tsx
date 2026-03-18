@@ -11,6 +11,7 @@ import StatsRow from '@/components/StatsRow';
 import JobsTable from '@/components/JobsTable';
 import NewJobPanel from '@/components/NewJobPanel';
 import DetailPanel from '@/components/DetailPanel';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const SEED_JOBS: Job[] = [
   {
@@ -119,29 +120,31 @@ export default function JobsPage() {
   const handleJobUpdated = () => {};
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
-      <Sidebar />
-      <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-        <Topbar onNewJob={handleNewJob} />
-        <main style={{ padding: '28px 32px', flex: 1 }}>
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px', marginRight: '8px', animation: 'spin 0.8s linear infinite' }}>
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              Loading jobs…
-            </div>
-          ) : (
-            <>
-              <StatsRow jobs={jobs} />
-              <JobsTable jobs={jobs} onRowClick={handleRowClick} onEditClick={handleEditClick} />
-            </>
-          )}
-        </main>
-      </div>
+    <ProtectedRoute>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+        <Sidebar />
+        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+          <Topbar onNewJob={handleNewJob} />
+          <main style={{ padding: '28px 32px', flex: 1 }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px', marginRight: '8px', animation: 'spin 0.8s linear infinite' }}>
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                Loading jobs…
+              </div>
+            ) : (
+              <>
+                <StatsRow jobs={jobs} />
+                <JobsTable jobs={jobs} onRowClick={handleRowClick} onEditClick={handleEditClick} />
+              </>
+            )}
+          </main>
+        </div>
 
-      <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={handleJobCreated} />
-      <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={handleJobUpdated} />
-    </div>
+        <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={handleJobCreated} />
+        <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={handleJobUpdated} />
+      </div>
+    </ProtectedRoute>
   );
 }

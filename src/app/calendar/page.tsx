@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import NewJobPanel from '@/components/NewJobPanel';
 import DetailPanel from '@/components/DetailPanel';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 /* ── Seed data (same as jobs page, used as fallback) ── */
 const SEED_JOBS: Job[] = [
@@ -252,22 +253,23 @@ export default function CalendarPage() {
   const nowHour = now.getHours() + now.getMinutes() / 60;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
-      <Sidebar />
+    <ProtectedRoute>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+        <Sidebar />
 
-      <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-        <Topbar onNewJob={handleNewJob} />
+        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+          <Topbar onNewJob={handleNewJob} />
 
-        <main style={{ padding: '28px 32px', flex: 1 }}>
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px', marginRight: '8px', animation: 'spin 0.8s linear infinite' }}>
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              Loading…
-            </div>
-          ) : (
-            <>
+          <main style={{ padding: '28px 32px', flex: 1 }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '20px', height: '20px', marginRight: '8px', animation: 'spin 0.8s linear infinite' }}>
+                  <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                Loading…
+              </div>
+            ) : (
+              <>
               {/* ── Calendar Header ── */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -600,6 +602,7 @@ export default function CalendarPage() {
       {/* Panels */}
       <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={() => {}} />
       <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={() => {}} />
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

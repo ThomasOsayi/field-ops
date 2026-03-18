@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -26,10 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body
-        className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

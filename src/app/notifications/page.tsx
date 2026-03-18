@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import {
   NotifRecord,
   onNotificationsSnapshot,
@@ -122,29 +123,30 @@ export default function NotificationsPage() {
   const recentActivity = notifications.filter((n) => getDay(n.createdAt) === 'today').slice(0, 5);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
-      <Sidebar />
+    <ProtectedRoute>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+        <Sidebar />
 
-      <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-        {/* Topbar */}
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em' }}>Notifications</h1>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: '12px', fontWeight: 700, background: unreadCount > 0 ? 'var(--danger-muted)' : 'var(--bg-elevated)', color: unreadCount > 0 ? 'var(--danger)' : 'var(--text-muted)', padding: '3px 10px', borderRadius: '12px' }}>
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All read'}
-            </span>
-          </div>
-          <button onClick={handleMarkAllRead}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)', transition: 'all 0.15s' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-card)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}><polyline points="20 6 9 17 4 12"/></svg>
-            Mark all read
-          </button>
-        </header>
+        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+          {/* Topbar */}
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)', position: 'sticky', top: 0, zIndex: 50 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em' }}>Notifications</h1>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '12px', fontWeight: 700, background: unreadCount > 0 ? 'var(--danger-muted)' : 'var(--bg-elevated)', color: unreadCount > 0 ? 'var(--danger)' : 'var(--text-muted)', padding: '3px 10px', borderRadius: '12px' }}>
+                {unreadCount > 0 ? `${unreadCount} unread` : 'All read'}
+              </span>
+            </div>
+            <button onClick={handleMarkAllRead}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)', transition: 'all 0.15s' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-card)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}><polyline points="20 6 9 17 4 12"/></svg>
+              Mark all read
+            </button>
+          </header>
 
-        <main style={{ padding: '28px 32px', flex: 1 }}>
+          <main style={{ padding: '28px 32px', flex: 1 }}>
           {/* Filter pills */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
             {notifFilters.map((f) => {
@@ -276,8 +278,9 @@ export default function NotificationsPage() {
               </div>
             </div>
           </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
