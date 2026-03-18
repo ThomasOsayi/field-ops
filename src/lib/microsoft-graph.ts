@@ -180,7 +180,11 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
     return null;
   }
 
-  const token = tokenInfo.token.trim();
+  const token = tokenInfo.token?.trim();
+  if (!token) {
+    console.error('No valid access token string');
+    return null;
+  }
   console.log('Creating calendar event:', JSON.stringify(event, null, 2));
   console.log('Token length:', token.length);
 

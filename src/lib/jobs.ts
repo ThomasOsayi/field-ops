@@ -3,6 +3,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   doc,
   query,
   orderBy,
@@ -65,4 +66,10 @@ export async function updateJob(id: string, data: Partial<Job>): Promise<void> {
 // ── Mark a job as completed ──
 export async function markJobComplete(id: string): Promise<void> {
   await updateJob(id, { status: 'completed' });
+}
+
+// ── Delete a job ──
+export async function deleteJob(id: string): Promise<void> {
+  const ref = doc(db, COLLECTION, id);
+  await deleteDoc(ref);
 }
