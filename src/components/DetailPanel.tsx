@@ -1,7 +1,7 @@
 'use client';
 
 import { Job } from '@/types/job';
-import { markJobComplete } from '@/lib/jobs';
+import { markJobCompleteWithSync } from '@/lib/job-actions';
 
 interface DetailPanelProps {
   open: boolean;
@@ -63,7 +63,7 @@ export default function DetailPanel({
   const sc = statusConfig[job.status] ?? statusConfig.scheduled;
 
   const handleMarkComplete = async () => {
-    await markJobComplete(job.id);
+    await markJobCompleteWithSync(job);
     onJobUpdated();
     onClose();
   };

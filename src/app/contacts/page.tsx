@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { CompanyRecord } from '@/types/contact';
 import { Job } from '@/types/job';
-import { getCompanies, deleteCompany } from '@/lib/contacts';
-import { getJobs } from '@/lib/jobs';
+import { onCompaniesSnapshot, deleteCompany } from '@/lib/contacts';
+import { onJobsSnapshot } from '@/lib/jobs';
+import { useFirestore } from '@/hooks/useFirestore';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import ContactDetailPanel from '@/components/ContactDetailPanel';
@@ -54,29 +55,15 @@ function contactInitials(name: string): string {
 }
 
 export default function ContactsPage() {
-  const [companies, setCompanies] = useState<CompanyRecord[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: companies, loading: companiesLoading } = useFirestore<CompanyRecord>(onCompaniesSnapshot, SEED_COMPANIES);
+  const { data: jobs } = useFirestore<Job>(onJobsSnapshot, []);
+  const loading = companiesLoading;
   const [filter, setFilter] = useState('All');
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanyRecord | null>(null);
   const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(null);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [compData, jobData] = await Promise.all([getCompanies(), getJobs()]);
-      setCompanies(compData.length > 0 ? compData : SEED_COMPANIES);
-      setJobs(jobData);
-    } catch {
-      setCompanies(SEED_COMPANIES);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -111,7 +98,6 @@ export default function ContactsPage() {
     if (!confirm(`Delete ${company.name}?`)) return;
     await deleteCompany(company.id);
     setDetailOpen(false);
-    fetchData();
   };
 
   return (
@@ -235,7 +221,7 @@ export default function ContactsPage() {
       </div>
 
       <ContactDetailPanel open={detailOpen} company={selectedCompany} jobs={jobs} onClose={() => setDetailOpen(false)} onEdit={handleEditCompany} onDelete={handleDeleteCompany} onNewJob={() => {}} />
-      <NewContactPanel open={formOpen} editingCompany={editingCompany} onClose={() => setFormOpen(false)} onSaved={fetchData} />
+      <NewContactPanel open={formOpen} editingCompany={editingCompany} onClose={() => setFormOpen(false)} onSaved={() => {}} />
     </div>
   );
 }

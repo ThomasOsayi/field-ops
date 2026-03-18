@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Job } from '@/types/job';
-import { getJobs } from '@/lib/jobs';
+import { onJobsSnapshot } from '@/lib/jobs';
+import { useFirestore } from '@/hooks/useFirestore';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import NewJobPanel from '@/components/NewJobPanel';
@@ -147,8 +148,7 @@ const GRADIENT_ACCENT = 'linear-gradient(135deg, #4C9EEB, #7B61FF)';
 export default function CalendarPage() {
   const [view, setView] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: jobs, loading } = useFirestore<Job>(onJobsSnapshot, SEED_JOBS);
 
   // Panel state
   const [newJobOpen, setNewJobOpen] = useState(false);
@@ -159,19 +159,6 @@ export default function CalendarPage() {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), n.getDate());
   }, []);
-
-  const fetchJobs = useCallback(async () => {
-    try {
-      const data = await getJobs();
-      setJobs(data.length > 0 ? data : SEED_JOBS);
-    } catch {
-      setJobs(SEED_JOBS);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -611,19 +598,8 @@ export default function CalendarPage() {
       </div>
 
       {/* Panels */}
-      <NewJobPanel
-        open={newJobOpen}
-        onClose={() => setNewJobOpen(false)}
-        onJobCreated={fetchJobs}
-      />
-
-      <DetailPanel
-        open={detailOpen}
-        job={selectedJob}
-        onClose={() => setDetailOpen(false)}
-        onEdit={handleEditClick}
-        onJobUpdated={fetchJobs}
-      />
+      <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={() => {}} />
+      <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={() => {}} />
     </div>
   );
 }

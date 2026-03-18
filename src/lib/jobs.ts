@@ -7,21 +7,44 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  onSnapshot,
+  Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Job, NewJob } from '@/types/job';
 
 const COLLECTION = 'jobs';
 
-// ── Fetch all jobs, newest first ──
+// ── Fetch all jobs, newest first (one-time) ──
 export async function getJobs(): Promise<Job[]> {
   const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
-
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
+  return snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
   })) as Job[];
+}
+
+// ── Real-time listener — calls onData whenever jobs change ──
+export function onJobsSnapshot(
+  onData: (jobs: Job[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const jobs = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Job[];
+      onData(jobs);
+    },
+    (error) => {
+      console.error('Jobs snapshot error:', error);
+      onError?.(error);
+    }
+  );
 }
 
 // ── Create a new job ──

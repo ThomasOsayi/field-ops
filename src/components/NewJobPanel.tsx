@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { NewJob } from '@/types/job';
-import { createJob } from '@/lib/jobs';
+import { createJobWithSync } from '@/lib/job-actions';
 
 interface NewJobPanelProps {
   open: boolean;
@@ -36,7 +36,7 @@ export default function NewJobPanel({ open, onClose, onJobCreated }: NewJobPanel
   const handleSave = async () => {
     setSaving(true);
     try {
-      await createJob(form);
+      await createJobWithSync(form);
       setSaving(false);
       setSaved(true);
       setTimeout(() => {
