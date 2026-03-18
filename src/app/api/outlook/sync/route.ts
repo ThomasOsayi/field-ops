@@ -83,3 +83,25 @@ export async function GET() {
     return NextResponse.json({ connected: false, email: '' });
   }
 }
+
+// Temporary test — hit GET /api/outlook/sync?test=true to test token directly
+export async function PUT() {
+  const { getValidAccessToken } = await import('@/lib/microsoft-graph');
+  
+  const tokenInfo = await getValidAccessToken();
+  if (!tokenInfo) {
+    return NextResponse.json({ error: 'No token' });
+  }
+
+  // Test the token directly against a simple endpoint
+  const res = await fetch('https://graph.microsoft.com/v1.0/me', {
+    headers: { Authorization: `Bearer ${tokenInfo.token}` },
+  });
+  
+  const body = await res.text();
+  return NextResponse.json({ 
+    status: res.status, 
+    body: body.substring(0, 500),
+    tokenStart: tokenInfo.token.substring(0, 30),
+  });
+}
