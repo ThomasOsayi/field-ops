@@ -145,6 +145,26 @@ export default function ContactsPage() {
     setTimeout(() => setSyncResult(null), 4000);
   };
 
+  const handleExport = () => {
+    const headers = ['Company', 'Address', 'City', 'Contact Name', 'Phone', 'Email', 'Role', 'Jobs', 'Last Job'];
+    const rows = filtered.map(c => {
+      const primary = c.contacts?.find(ct => ct.isPrimary) ?? c.contacts?.[0];
+      return [
+        c.name, c.address, c.city,
+        primary?.name || '', primary?.phone || '', primary?.email || '', primary?.role || '',
+        String(getJobCount(c.name)), getLastJobDate(c.name),
+      ];
+    });
+    const csv = [headers.join(','), ...rows.map(r => r.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fieldops-contacts-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Compute job stats per company from real jobs data
   const companyJobStats = useMemo(() => {
     const map: Record<string, { count: number; lastDate: string }> = {};
@@ -207,7 +227,7 @@ export default function ContactsPage() {
       <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
         <Sidebar />
         <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
-          <Topbar onNewJob={handleAddContact} onSearch={setSearchQuery} buttonLabel="Add Contact" />
+          <Topbar onNewJob={handleAddContact} onSearch={setSearchQuery} onExport={handleExport} buttonLabel="Add Contact" />
           <main style={{ padding: '28px 32px', flex: 1 }}>
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>Loading…</div>

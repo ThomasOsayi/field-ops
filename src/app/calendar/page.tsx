@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Job } from '@/types/job';
 import { onJobsSnapshot } from '@/lib/jobs';
 import { useFirestore } from '@/hooks/useFirestore';
+import { notifyOutlookSync } from '@/lib/notifications';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import NewJobPanel from '@/components/NewJobPanel';
@@ -14,7 +15,7 @@ const SEED_JOBS: Job[] = [];
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+const HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 
 function isSameDay(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 function parseJobDate(ds: string) { const [y, m, d] = ds.split('-').map(Number); return new Date(y, m - 1, d); }
@@ -138,6 +139,7 @@ export default function CalendarPage() {
       else {
         const p = []; if (data.newlySynced > 0) p.push(`${data.newlySynced} new events synced`); if (data.alreadySynced > 0) p.push(`${data.alreadySynced} already up to date`); if (data.failed > 0) p.push(`${data.failed} failed`);
         setSyncResult({ msg: p.join(', '), type: data.failed > 0 ? 'error' : 'success' });
+        if (data.newlySynced > 0) notifyOutlookSync(data.newlySynced).catch(() => {});
       }
     } catch { setSyncResult({ msg: 'Failed to connect to sync service', type: 'error' }); }
     setSyncing(false);
@@ -242,10 +244,10 @@ export default function CalendarPage() {
                           return (
                             <div key={di} style={{ borderRight: di < 6 ? '1px solid var(--border)' : 'none', position: 'relative' }}>
                               {HOURS.map(h => <div key={h} style={{ height: '64px', borderBottom: '1px solid var(--border)' }} />)}
-                              {isToday && nowHour >= 7 && nowHour <= 19 && <div style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: 'var(--danger)', zIndex: 10, top: `${(nowHour - 7) * 64}px` }}><div style={{ position: 'absolute', left: '-4px', top: '-3px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--danger)' }} /></div>}
+                              {isToday && nowHour >= 5 && nowHour <= 21 && <div style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: 'var(--danger)', zIndex: 10, top: `${(nowHour - 5) * 64}px` }}><div style={{ position: 'absolute', left: '-4px', top: '-3px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--danger)' }} /></div>}
                               {laidOut.map(ev => {
-                                if (ev.start < 7 || ev.start > 18) return null;
-                                const top = (ev.start - 7) * 64;
+                                if (ev.start < 5 || ev.start > 20) return null;
+                                const top = (ev.start - 5) * 64;
                                 const height = Math.max((ev.end - ev.start) * 64, 44);
                                 const c = JOB_COLORS[ev.colorIdx];
                                 const leftPct = ev.left * 100;

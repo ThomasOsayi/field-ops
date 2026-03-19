@@ -241,7 +241,7 @@ export default function DetailPanel({
             <div style={{ marginBottom: '24px' }}>
               <SectionHead icon="clock" label="Schedule" />
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                <DRow label="Date" value={new Date(job.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} mono />
+                <DRow label="Date" value={(() => { const [y,m,d] = job.date.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()} mono />
                 <DRow label="On Site" value={job.onSiteTime} mono />
                 <DRow label="KTI Time" value={job.ktiTime} mono />
                 <DRow label="Outlook" synced last />

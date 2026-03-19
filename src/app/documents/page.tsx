@@ -115,15 +115,27 @@ export default function DocumentsPage() {
     if (!d.storagePath && !d.storageUrl) return;
     try {
       const url = d.storageUrl || await getDocumentDownloadUrl(d.storagePath);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = d.name;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (e) { console.error('Download failed:', e); }
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        window.open(url, '_blank');
+      } else {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = d.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch (e) {
+      console.error('Download failed:', e);
+      const url = d.storageUrl || await getDocumentDownloadUrl(d.storagePath);
+      window.open(url, '_blank');
+    }
   };
 
   const handleLinkJob = async (docRecord: DocRecord, jobValue: string) => {
