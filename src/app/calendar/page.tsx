@@ -10,6 +10,7 @@ import Topbar from '@/components/Topbar';
 import NewJobPanel from '@/components/NewJobPanel';
 import DetailPanel from '@/components/DetailPanel';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { getUidSafe } from '@/lib/auth-helpers';
 
 const SEED_JOBS: Job[] = [];
 
@@ -139,8 +140,14 @@ export default function CalendarPage() {
 
   const handleSyncAll = async () => {
     setSyncing(true); setSyncResult(null);
+    const uid = getUidSafe();
+    if (!uid) { setSyncResult({ msg: 'Not authenticated', type: 'error' }); setSyncing(false); return; }
     try {
-      const res = await fetch('/api/outlook/sync-all', { method: 'POST' });
+      const res = await fetch('/api/outlook/sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid }),
+      });
       const data = await res.json();
       if (!res.ok) { setSyncResult({ msg: data.error || 'Sync failed', type: 'error' }); }
       else if (data.newlySynced === 0 && data.failed === 0) { setSyncResult({ msg: `All ${data.alreadySynced} active jobs already synced`, type: 'info' }); }
