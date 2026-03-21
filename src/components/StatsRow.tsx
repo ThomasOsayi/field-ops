@@ -46,13 +46,11 @@ export default function StatsRow({ jobs }: StatsRowProps) {
   const stats = useMemo(() => {
     const active = jobs.filter(j => j.status !== 'completed').length;
 
-    // Scheduled today: jobs with status 'scheduled' AND date is today
     const scheduledTodayJobs = jobs.filter(j =>
       j.status === 'scheduled' && isSameDay(parseJobDate(j.date), today)
     );
     const scheduledToday = scheduledTodayJobs.length;
 
-    // Next scheduled job time
     const now = new Date();
     const nowHour = now.getHours() + now.getMinutes() / 60;
     const upcoming = scheduledTodayJobs
@@ -60,10 +58,8 @@ export default function StatsRow({ jobs }: StatsRowProps) {
       .sort((a, b) => parseTimeToHour(a.onSiteTime) - parseTimeToHour(b.onSiteTime));
     const nextTime = upcoming.length > 0 ? `Next at ${formatTimeDisplay(upcoming[0].onSiteTime)}` : scheduledToday > 0 ? 'All started' : 'None today';
 
-    // In progress
     const inProgress = jobs.filter(j => j.status === 'in-progress').length;
 
-    // In-progress jobs nearing KTI end
     const nearingEnd = jobs.filter(j => {
       if (j.status !== 'in-progress') return false;
       const start = parseTimeToHour(j.onSiteTime);
@@ -74,7 +70,6 @@ export default function StatsRow({ jobs }: StatsRowProps) {
     }).length;
     const inProgressDelta = nearingEnd > 0 ? `${nearingEnd} nearing end` : inProgress > 0 ? `${inProgress} active now` : 'None active';
 
-    // Completed this week (last 7 days)
     const completedWeek = jobs.filter(j => j.status === 'completed' && isWithinLastDays(j.date, 7)).length;
     const completedPrevWeek = jobs.filter(j => j.status === 'completed' && isWithinLastDays(j.date, 14) && !isWithinLastDays(j.date, 7)).length;
     let completedDelta = `${completedWeek} this week`;
@@ -116,22 +111,154 @@ export default function StatsRow({ jobs }: StatsRowProps) {
   const deltaColor = (type: string) => type === 'up' ? 'var(--success)' : type === 'down' ? 'var(--danger)' : 'var(--text-muted)';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '28px' }}>
-      {cards.map((s, i) => (
-        <div key={s.label} style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius)', padding: '18px 20px', background: 'var(--bg-card)', border: '1px solid var(--border)', transition: 'all 0.2s', animation: 'fadeUp 0.4s ease forwards', animationDelay: `${(i + 1) * 0.05}s`, opacity: 0 }}
-          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-hover)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-card)'; }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: s.topColor }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.iconBg, color: s.iconColor }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>{s.icon}</svg>
+    <>
+      <div className="stats-row">
+        {cards.map((s, i) => (
+          <div key={s.label} className="stat-card"
+            style={{ animationDelay: `${(i + 1) * 0.05}s` }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-hover)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-card)'; }}>
+            <div className="stat-top-bar" style={{ background: s.topColor }} />
+            <div className="stat-header">
+              <div className="stat-icon" style={{ background: s.iconBg, color: s.iconColor }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>{s.icon}</svg>
+              </div>
+              <div className="stat-label">{s.label}</div>
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>{s.label}</div>
+            <div className="stat-value" style={{ color: s.valueColor }}>{s.value}</div>
+            <div className="stat-delta" style={{ color: deltaColor(s.deltaType) }}>{s.delta}</div>
           </div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: '32px', fontWeight: 700, letterSpacing: '-0.03em', color: s.valueColor, marginBottom: '4px' }}>{s.value}</div>
-          <div style={{ fontSize: '12px', fontFamily: 'var(--mono)', fontWeight: 500, color: deltaColor(s.deltaType) }}>{s.delta}</div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      <style>{`
+        /* ═══ STATS ROW — DESKTOP ═══ */
+        .stats-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 28px;
+        }
+
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+          border-radius: var(--radius);
+          padding: 18px 20px;
+          background: var(--bg-card);
+          border: 1px solid var(--border);
+          transition: all 0.2s;
+          animation: fadeUp 0.4s ease forwards;
+          opacity: 0;
+        }
+
+        .stat-top-bar {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+        }
+
+        .stat-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+
+        .stat-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: var(--radius-sm);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: var(--text-muted);
+        }
+
+        .stat-value {
+          font-family: var(--mono);
+          font-size: 32px;
+          font-weight: 700;
+          letter-spacing: -0.03em;
+          margin-bottom: 4px;
+        }
+
+        .stat-delta {
+          font-size: 12px;
+          font-family: var(--mono);
+          font-weight: 500;
+        }
+
+        /* ═══ MOBILE — ≤768px: horizontal scroll ═══ */
+        @media (max-width: 768px) {
+          .stats-row {
+            display: flex;
+            gap: 10px;
+            padding: 0;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .stats-row::-webkit-scrollbar { display: none; }
+
+          .stat-card {
+            flex-shrink: 0;
+            width: 145px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            /* Disable hover effects on touch */
+            animation: none;
+            opacity: 1;
+          }
+
+          .stat-header {
+            flex-direction: column-reverse;
+            align-items: flex-start;
+            gap: 6px;
+            margin-bottom: 8px;
+          }
+
+          .stat-icon {
+            display: none;
+          }
+
+          .stat-label {
+            font-size: 10px;
+            letter-spacing: 0.04em;
+          }
+
+          .stat-value {
+            font-size: 24px;
+            margin-bottom: 2px;
+          }
+
+          .stat-delta {
+            font-size: 10px;
+          }
+        }
+
+        /* ═══ SMALL MOBILE — ≤390px ═══ */
+        @media (max-width: 390px) {
+          .stat-card {
+            width: 130px;
+            padding: 10px 12px;
+          }
+
+          .stat-value {
+            font-size: 22px;
+          }
+        }
+      `}</style>
+    </>
   );
 }

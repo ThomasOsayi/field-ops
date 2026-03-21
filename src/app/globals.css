@@ -38,6 +38,11 @@
   /* Alias font variables so components can use either naming convention */
   --font: var(--font-dm-sans), 'DM Sans', -apple-system, sans-serif;
   --mono: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+
+  /* ── Mobile layout vars ── */
+  --sidebar-width: 260px;
+  --tabbar-height: 68px;       /* bottom tab bar on mobile (52px + 16px safe area) */
+  --mobile-header-height: 56px;
 }
 
 * {
@@ -114,4 +119,74 @@ textarea::placeholder {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Shared utilities & layout shifts
+   ═══════════════════════════════════════════════════════ */
+
+/*
+ * Hide scrollbar on horizontal scroll containers (stats, filters)
+ * Used via className="mobile-scroll-x"
+ */
+.mobile-scroll-x {
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.mobile-scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── Tablet: ≤1024px ── */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+}
+
+/* ── Mobile: ≤768px ── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  /*
+   * Main app layout: remove sidebar margin, add bottom padding for tab bar.
+   * The .app-main class should be on the main content wrapper in each page.
+   */
+  .app-main {
+    margin-left: 0 !important;
+    padding-bottom: var(--tabbar-height) !important;
+  }
+
+  /*
+   * Panels (detail, new job, etc.) go full-screen on mobile.
+   * Applied via className="slide-panel"
+   */
+  .slide-panel {
+    width: 100% !important;
+    border-left: none !important;
+  }
+
+  /*
+   * Panel overlay — no blur on mobile for performance
+   */
+  .panel-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /*
+   * 16px input font-size to prevent iOS Safari auto-zoom
+   */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Small mobile: ≤390px ── */
+@media (max-width: 390px) {
+  .app-main {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
 }

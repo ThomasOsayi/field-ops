@@ -73,11 +73,11 @@ export default function JobsPage() {
 
   return (
     <ProtectedRoute>
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
+      <div className="jobs-page">
         <Sidebar />
-        <div style={{ marginLeft: '260px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
+        <div className="jobs-main app-main">
           <Topbar onNewJob={handleNewJob} onSearch={setSearchQuery} onExport={handleExport} />
-          <main style={{ padding: '28px 32px', flex: 1 }}>
+          <main className="jobs-content">
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>Loading jobs…</div>
             ) : (
@@ -98,6 +98,47 @@ export default function JobsPage() {
         <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={() => {}} editJob={editJob} />
         <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={() => {}} />
       </div>
+
+      <style>{`
+        .jobs-page {
+          display: flex;
+          min-height: 100vh;
+          background: var(--bg-void);
+        }
+
+        .jobs-main {
+          margin-left: var(--sidebar-width);
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        .jobs-content {
+          padding: 28px 32px;
+          flex: 1;
+        }
+
+        @media (max-width: 768px) {
+          .jobs-main {
+            margin-left: 0;
+          }
+
+          .jobs-content {
+            padding: 16px;
+            padding-bottom: calc(var(--tabbar-height) + 16px);
+          }
+        }
+
+        @media (max-width: 390px) {
+          .jobs-content {
+            padding: 12px;
+            padding-bottom: calc(var(--tabbar-height) + 12px);
+          }
+        }
+      `}</style>
     </ProtectedRoute>
   );
 }
