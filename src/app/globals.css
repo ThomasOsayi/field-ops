@@ -35,14 +35,80 @@
   --radius: 14px;
   --radius-sm: 10px;
   --radius-xs: 6px;
-  /* Alias font variables so components can use either naming convention */
   --font: var(--font-dm-sans), 'DM Sans', -apple-system, sans-serif;
   --mono: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
 
   /* ── Mobile layout vars ── */
   --sidebar-width: 260px;
-  --tabbar-height: 68px;       /* bottom tab bar on mobile (52px + 16px safe area) */
+  --tabbar-height: 68px;
   --mobile-header-height: 56px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE
+   Applied via data-theme="light" on <html>
+   ═══════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-void: #F0F2F5;
+  --bg-app: #F7F8FA;
+  --bg-sidebar: #FFFFFF;
+  --bg-surface: #F3F4F6;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #F9FAFB;
+  --bg-input: #F3F4F6;
+  --bg-hover: #EEF0F4;
+  --border: #E2E5EB;
+  --border-hover: #CBD0D8;
+  --border-focus: #3B82F6;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #9CA3AF;
+  --accent: #3B82F6;
+  --accent-bright: #2563EB;
+  --accent-dim: #60A5FA;
+  --accent-glow: rgba(59,130,246,0.08);
+  --accent-glow-strong: rgba(59,130,246,0.14);
+  --gradient-accent: linear-gradient(135deg, #3B82F6, #6366F1);
+  --gradient-subtle: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.03));
+  --success: #059669;
+  --success-muted: rgba(5,150,105,0.08);
+  --warning: #D97706;
+  --warning-muted: rgba(217,119,6,0.08);
+  --danger: #DC2626;
+  --danger-muted: rgba(220,38,38,0.06);
+  --purple: #7C3AED;
+  --purple-muted: rgba(124,58,237,0.08);
+  --orange: #EA580C;
+  --orange-muted: rgba(234,88,12,0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+/* Light mode: gradient text uses darker gradient */
+[data-theme="light"] .gradient-text {
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Light mode: scrollbar colors */
+[data-theme="light"] * { scrollbar-color: #CBD0D8 transparent; }
+[data-theme="light"] *::-webkit-scrollbar-thumb { background: #CBD0D8; }
+
+/* Light mode: select options */
+[data-theme="light"] select option { background: #FFFFFF; color: #111827; }
+
+/* Light mode: overlays need lighter dim */
+[data-theme="light"] .panel-overlay,
+[data-theme="light"] .cdp-overlay,
+[data-theme="light"] .ncp-overlay,
+[data-theme="light"] .doc-panel-overlay {
+  background: rgba(0,0,0,0.3) !important;
 }
 
 * {
@@ -58,6 +124,7 @@ html, body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* ── Fix Tailwind v4 preflight stripping table borders ── */
@@ -71,7 +138,6 @@ th, td {
   vertical-align: middle;
 }
 
-/* ── Table row borders — match HTML reference exactly ── */
 td {
   border-bottom: 1px solid var(--border);
 }
@@ -98,7 +164,7 @@ textarea::placeholder {
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* ── Gradient text — -webkit- prefixes don't work in React inline styles ── */
+/* ── Gradient text ── */
 .gradient-text {
   background: linear-gradient(135deg, #4C9EEB, #7B61FF);
   -webkit-background-clip: text;
@@ -125,10 +191,6 @@ textarea::placeholder {
    MOBILE RESPONSIVE — Shared utilities & layout shifts
    ═══════════════════════════════════════════════════════ */
 
-/*
- * Hide scrollbar on horizontal scroll containers (stats, filters)
- * Used via className="mobile-scroll-x"
- */
 .mobile-scroll-x {
   overflow-x: auto;
   -ms-overflow-style: none;
@@ -136,54 +198,37 @@ textarea::placeholder {
 }
 .mobile-scroll-x::-webkit-scrollbar { display: none; }
 
-/* ── Tablet: ≤1024px ── */
 @media (max-width: 1024px) {
   :root {
     --sidebar-width: 220px;
   }
 }
 
-/* ── Mobile: ≤768px ── */
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 0px;
   }
 
-  /*
-   * Main app layout: remove sidebar margin, add bottom padding for tab bar.
-   * The .app-main class should be on the main content wrapper in each page.
-   */
   .app-main {
     margin-left: 0 !important;
     padding-bottom: var(--tabbar-height) !important;
   }
 
-  /*
-   * Panels (detail, new job, etc.) go full-screen on mobile.
-   * Applied via className="slide-panel"
-   */
   .slide-panel {
     width: 100% !important;
     border-left: none !important;
   }
 
-  /*
-   * Panel overlay — no blur on mobile for performance
-   */
   .panel-overlay {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
-  /*
-   * 16px input font-size to prevent iOS Safari auto-zoom
-   */
   input, select, textarea {
     font-size: 16px !important;
   }
 }
 
-/* ── Small mobile: ≤390px ── */
 @media (max-width: 390px) {
   .app-main {
     padding-left: 12px !important;

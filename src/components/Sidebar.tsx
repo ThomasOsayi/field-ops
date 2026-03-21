@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeProvider';
 import { useFirestore } from '@/hooks/useFirestore';
 import { onJobsSnapshot } from '@/lib/jobs';
 import { onNotificationsSnapshot } from '@/lib/notifications';
@@ -16,6 +17,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { data: jobs } = useFirestore<Job>(onJobsSnapshot, []);
   const { data: notifs } = useFirestore<Notif>(onNotificationsSnapshot as unknown as (cb: (d: Notif[]) => void, err?: (e: Error) => void) => () => void, []);
 
@@ -42,7 +44,6 @@ export default function Sidebar() {
     { label: 'Integrations', href: '/integrations', icon: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></> },
   ];
 
-  /* ── Bottom tab bar items (mobile only) ── */
   const tabItems = [
     { label: 'Jobs', href: '/jobs', badge: String(activeJobCount), icon: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></> },
     { label: 'Calendar', href: '/calendar', icon: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></> },
@@ -63,20 +64,7 @@ export default function Sidebar() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '18px', height: '18px' }}>{item.icon}</svg>
       {item.label}
       {item.badge && (
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: '11px',
-            fontWeight: 700,
-            background: item.label === 'Notifications' ? 'var(--danger-muted)' : 'var(--accent-glow)',
-            color: item.label === 'Notifications' ? 'var(--danger)' : 'var(--accent)',
-            padding: '2px 8px',
-            borderRadius: '10px',
-            fontFamily: 'var(--mono)',
-          }}
-        >
-          {item.badge}
-        </span>
+        <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, background: item.label === 'Notifications' ? 'var(--danger-muted)' : 'var(--accent-glow)', color: item.label === 'Notifications' ? 'var(--danger)' : 'var(--accent)', padding: '2px 8px', borderRadius: '10px', fontFamily: 'var(--mono)' }}>{item.badge}</span>
       )}
     </Link>
   );
@@ -85,7 +73,6 @@ export default function Sidebar() {
     <>
       {/* ═══ DESKTOP SIDEBAR ═══ */}
       <nav className="sidebar-desktop">
-        {/* Brand */}
         <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '36px', height: '36px', background: GRADIENT_ACCENT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontWeight: 800, fontSize: '14px', color: '#fff', boxShadow: '0 4px 16px rgba(76,158,235,0.3)' }}>FO</div>
           <div>
@@ -94,17 +81,16 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Nav */}
         <div style={{ padding: '14px 12px', flex: 1 }}>
           <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '16px 10px 8px' }}>Main</div>
           {navMain.map(item => <NavItem key={item.label} item={item} active={isActive(item.href)} />)}
-
           <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '16px 10px 8px' }}>Settings</div>
           {navSettings.map(item => <NavItem key={item.label} item={item} active={isActive(item.href)} />)}
         </div>
 
         {/* Footer */}
         <div style={{ padding: '14px', borderTop: '1px solid var(--border)' }}>
+          {/* Outlook sync */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'var(--accent-glow)', border: '1px solid rgba(76,158,235,0.15)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', animation: 'pulse 2s infinite', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -113,8 +99,24 @@ export default function Sidebar() {
             </div>
           </div>
 
+          {/* ── Theme Toggle ── */}
+          <div className="theme-toggle-row">
+            <button onClick={toggleTheme} className="theme-toggle-btn" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+              <div className="theme-toggle-track" data-active={theme === 'light' ? 'true' : 'false'}>
+                <div className="theme-toggle-thumb">
+                  {theme === 'dark' ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '12px', height: '12px' }}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '12px', height: '12px' }}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  )}
+                </div>
+              </div>
+              <span className="theme-toggle-label">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+            </button>
+          </div>
+
           {/* User + Logout */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', marginTop: '8px', borderRadius: 'var(--radius-sm)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', marginTop: '4px', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: GRADIENT_ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#fff', flexShrink: 0 }}>{initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
@@ -149,106 +151,58 @@ export default function Sidebar() {
       </nav>
 
       <style>{`
-        /* ═══ DESKTOP SIDEBAR ═══ */
         .sidebar-desktop {
-          position: fixed;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          width: var(--sidebar-width);
-          background: var(--bg-sidebar);
-          border-right: 1px solid var(--border);
-          display: flex;
-          flex-direction: column;
-          z-index: 100;
+          position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-width);
+          background: var(--bg-sidebar); border-right: 1px solid var(--border);
+          display: flex; flex-direction: column; z-index: 100;
+        }
+
+        /* ── Theme toggle ── */
+        .theme-toggle-row {
+          margin-top: 8px; padding: 0 2px;
+        }
+        .theme-toggle-btn {
+          display: flex; align-items: center; gap: 10px; width: 100%;
+          padding: 8px 12px; border-radius: var(--radius-sm); border: none;
+          background: transparent; cursor: pointer; transition: background 0.15s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .theme-toggle-btn:hover { background: var(--bg-hover); }
+        .theme-toggle-track {
+          width: 40px; height: 22px; border-radius: 11px;
+          background: var(--border); position: relative; transition: background 0.2s; flex-shrink: 0;
+        }
+        .theme-toggle-track[data-active="true"] { background: var(--accent); }
+        .theme-toggle-thumb {
+          position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+          border-radius: 50%; background: var(--bg-card); display: flex;
+          align-items: center; justify-content: center; transition: left 0.2s;
+          color: var(--text-secondary); box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .theme-toggle-track[data-active="true"] .theme-toggle-thumb {
+          left: 21px; background: #fff; color: var(--accent);
+        }
+        .theme-toggle-label {
+          font-size: 12px; font-weight: 600; color: var(--text-muted);
         }
 
         /* ═══ MOBILE TAB BAR ═══ */
-        .tabbar-mobile {
-          display: none;
-        }
+        .tabbar-mobile { display: none; }
 
-        /* ── ≤768px: hide sidebar, show tab bar ── */
         @media (max-width: 768px) {
-          .sidebar-desktop {
-            display: none;
-          }
-
+          .sidebar-desktop { display: none; }
           .tabbar-mobile {
-            display: flex;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--border);
-            justify-content: space-around;
-            padding: 6px 0 env(safe-area-inset-bottom, 16px);
+            display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            background: var(--bg-sidebar); border-top: 1px solid var(--border);
+            justify-content: space-around; padding: 6px 0 env(safe-area-inset-bottom, 16px);
           }
-
-          .tabbar-tab {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            padding: 6px 10px;
-            color: var(--text-muted);
-            text-decoration: none;
-            position: relative;
-            -webkit-tap-highlight-color: transparent;
-            transition: color 0.15s;
-          }
-
-          .tabbar-tab-active {
-            color: var(--accent-bright);
-          }
-
-          .tabbar-icon-wrap {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .tabbar-icon {
-            width: 22px;
-            height: 22px;
-          }
-
-          .tabbar-label {
-            font-size: 10px;
-            font-weight: 600;
-            line-height: 1;
-          }
-
-          .tabbar-badge {
-            position: absolute;
-            top: -4px;
-            right: -10px;
-            min-width: 16px;
-            height: 16px;
-            border-radius: 8px;
-            background: var(--accent);
-            color: #fff;
-            font-size: 9px;
-            font-weight: 800;
-            font-family: var(--mono);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 4px;
-          }
-
-          .tabbar-dot {
-            position: absolute;
-            top: -1px;
-            right: -4px;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--danger);
-          }
+          .tabbar-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; color: var(--text-muted); text-decoration: none; position: relative; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
+          .tabbar-tab-active { color: var(--accent-bright); }
+          .tabbar-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+          .tabbar-icon { width: 22px; height: 22px; }
+          .tabbar-label { font-size: 10px; font-weight: 600; line-height: 1; }
+          .tabbar-badge { position: absolute; top: -4px; right: -10px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; font-family: var(--mono); display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+          .tabbar-dot { position: absolute; top: -1px; right: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
         }
       `}</style>
     </>
