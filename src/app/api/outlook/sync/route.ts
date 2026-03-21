@@ -30,10 +30,14 @@ async function removeEventId(jobId: string): Promise<void> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, job } = await request.json();
+    const { action, job, uid } = await request.json();
 
-    // Check connection
-    const { connected } = await isOutlookConnected();
+    if (!uid || typeof uid !== 'string') {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    // Check connection (tokens live under users/{uid}/settings/outlook_tokens)
+    const { connected } = await isOutlookConnected(uid);
     if (!connected) {
       return NextResponse.json({ error: 'Outlook not connected' }, { status: 401 });
     }
@@ -44,11 +48,11 @@ export async function POST(request: NextRequest) {
 
       if (existingEventId) {
         // Update existing event
-        const success = await updateCalendarEvent(existingEventId, calendarEvent);
+        const success = await updateCalendarEvent(uid, existingEventId, calendarEvent);
         return NextResponse.json({ success, action: 'updated', eventId: existingEventId });
       } else {
         // Create new event
-        const eventId = await createCalendarEvent(calendarEvent);
+        const eventId = await createCalendarEvent(uid, calendarEvent);
         if (eventId) {
           await saveEventId(job.id, eventId);
           return NextResponse.json({ success: true, action: 'created', eventId });
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (action === 'delete') {
       const eventId = await getEventId(job.id);
       if (eventId) {
-        const success = await deleteCalendarEvent(eventId);
+        const success = await deleteCalendarEvent(uid, eventId);
         if (success) await removeEventId(job.id);
         return NextResponse.json({ success, action: 'deleted' });
       }
@@ -74,21 +78,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET — check connection status
-export async function GET() {
+// GET — check connection status (?uid= required; matches client checkOutlookConnection)
+export async function GET(request: NextRequest) {
   try {
-    const status = await isOutlookConnected();
+    const uid = request.nextUrl.searchParams.get('uid');
+    if (!uid) {
+      return NextResponse.json({ connected: false, email: '' });
+    }
+    const status = await isOutlookConnected(uid);
     return NextResponse.json(status);
   } catch {
     return NextResponse.json({ connected: false, email: '' });
   }
 }
 
-// Temporary test — hit GET /api/outlook/sync?test=true to test token directly
-export async function PUT() {
+// Temporary test — PUT /api/outlook/sync?uid=<firebaseUid> to test token against Graph /me
+export async function PUT(request: NextRequest) {
   const { getValidAccessToken } = await import('@/lib/microsoft-graph');
-  
-  const tokenInfo = await getValidAccessToken();
+
+  const uid = request.nextUrl.searchParams.get('uid');
+  if (!uid) {
+    return NextResponse.json({ error: 'Missing uid query param' }, { status: 400 });
+  }
+
+  const tokenInfo = await getValidAccessToken(uid);
   if (!tokenInfo) {
     return NextResponse.json({ error: 'No token' });
   }
