@@ -4,6 +4,7 @@ import { syncJobToOutlook } from '@/lib/outlook-sync';
 import { notifyJobCreated, notifyJobStatusChanged } from '@/lib/notifications';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getUid } from '@/lib/auth-helpers';
 import { createCompany, updateCompany } from '@/lib/contacts';
 import { NewCompanyRecord } from '@/types/contact';
 
@@ -16,7 +17,7 @@ async function ensureCompanyFromJob(job: NewJob | Job): Promise<void> {
   try {
     if (!job.company?.trim()) return;
 
-    const companiesRef = collection(db, 'companies');
+    const companiesRef = collection(db, `users/${getUid()}/companies`);
     const q = query(companiesRef, where('name', '==', job.company.trim()));
     const snap = await getDocs(q);
 

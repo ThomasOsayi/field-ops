@@ -3,10 +3,11 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID!;
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET!;
-const REDIRECT_URI = `${process.env.NEXTAUTH_URL}/api/auth/callback/outlook`;
 
-const TOKEN_DOC = 'outlook_tokens';
-const SETTINGS_COLLECTION = 'settings';
+// Dynamic redirect URI — uses NEXTAUTH_URL which is:
+//   http://localhost:3000 in dev (.env.local)
+//   https://fieldopapp.com in production (Vercel env vars)
+const REDIRECT_URI = `${process.env.NEXTAUTH_URL}/api/auth/callback/outlook`;
 
 // ── Types ──
 interface TokenData {
@@ -24,37 +25,40 @@ interface CalendarEvent {
   location?: { displayName: string };
 }
 
-// ── OAuth URLs ──
-export function getAuthUrl(): string {
+// ═══ OAuth URLs ═══
+
+/**
+ * Generate the Microsoft OAuth URL.
+ * Encodes the Firebase uid in the state parameter so the callback
+ * knows which user to store tokens for.
+ */
+export function getAuthUrl(firebaseUid: string): string {
   const params = new URLSearchParams({
     client_id: MICROSOFT_CLIENT_ID,
     response_type: 'code',
     redirect_uri: REDIRECT_URI,
     response_mode: 'query',
     scope: 'offline_access Calendars.ReadWrite User.Read',
-    state: 'fieldops-outlook-sync',
+    state: `fieldops-${firebaseUid}`,
   });
-
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
-// ── Exchange auth code for tokens ──
-export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
-  const response = await fetch(
-    'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: MICROSOFT_CLIENT_ID,
-        client_secret: MICROSOFT_CLIENT_SECRET,
-        code,
-        redirect_uri: REDIRECT_URI,
-        grant_type: 'authorization_code',
-        scope: 'offline_access Calendars.ReadWrite User.Read',
-      }),
-    }
-  );
+// ═══ Token Exchange ═══
+
+export async function exchangeCodeForTokens(code: string, firebaseUid: string): Promise<TokenData> {
+  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: MICROSOFT_CLIENT_ID,
+      client_secret: MICROSOFT_CLIENT_SECRET,
+      code,
+      redirect_uri: REDIRECT_URI,
+      grant_type: 'authorization_code',
+      scope: 'offline_access Calendars.ReadWrite User.Read',
+    }),
+  });
 
   if (!response.ok) {
     const error = await response.text();
@@ -63,7 +67,7 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
 
   const data = await response.json();
 
-  // Get user email
+  // Get user email from Microsoft
   const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
     headers: { Authorization: `Bearer ${data.access_token}` },
   });
@@ -76,26 +80,24 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
     user_email: userData.mail || userData.userPrincipalName || '',
   };
 
-  await saveTokens(tokenData);
+  await saveTokens(firebaseUid, tokenData);
   return tokenData;
 }
 
-// ── Refresh access token ──
+// ═══ Token Refresh ═══
+
 async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
-  const response = await fetch(
-    'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: MICROSOFT_CLIENT_ID,
-        client_secret: MICROSOFT_CLIENT_SECRET,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-        scope: 'offline_access Calendars.ReadWrite User.Read',
-      }),
-    }
-  );
+  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: MICROSOFT_CLIENT_ID,
+      client_secret: MICROSOFT_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+      scope: 'offline_access Calendars.ReadWrite User.Read',
+    }),
+  });
 
   if (!response.ok) {
     const error = await response.text();
@@ -103,49 +105,38 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
   }
 
   const data = await response.json();
-
-  const tokenData: TokenData = {
+  return {
     access_token: data.access_token,
     refresh_token: data.refresh_token || refreshToken,
     expires_at: Date.now() + data.expires_in * 1000,
     user_email: '',
   };
-
-  return tokenData;
 }
 
-// ── Token storage (Firestore) ──
-async function saveTokens(tokens: TokenData): Promise<void> {
-  const ref = doc(db, SETTINGS_COLLECTION, TOKEN_DOC);
+// ═══ Per-User Token Storage ═══
+
+async function saveTokens(uid: string, tokens: TokenData): Promise<void> {
+  const ref = doc(db, `users/${uid}/settings`, 'outlook_tokens');
   await setDoc(ref, tokens);
 }
 
-async function getStoredTokens(): Promise<TokenData | null> {
-  const ref = doc(db, SETTINGS_COLLECTION, TOKEN_DOC);
+async function getStoredTokens(uid: string): Promise<TokenData | null> {
+  const ref = doc(db, `users/${uid}/settings`, 'outlook_tokens');
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return snap.data() as TokenData;
 }
 
 // ── Get a valid access token (auto-refresh if expired) ──
-export async function getValidAccessToken(): Promise<{ token: string; email: string } | null> {
-  const stored = await getStoredTokens();
+export async function getValidAccessToken(uid: string): Promise<{ token: string; email: string } | null> {
+  const stored = await getStoredTokens(uid);
   if (!stored || !stored.access_token) return null;
-
-  console.log('Stored token data:', {
-    hasAccessToken: !!stored.access_token,
-    hasRefreshToken: !!stored.refresh_token,
-    expiresAt: stored.expires_at,
-    now: Date.now(),
-    isExpired: Date.now() > stored.expires_at - 5 * 60 * 1000,
-    email: stored.user_email,
-  });
 
   if (Date.now() > stored.expires_at - 5 * 60 * 1000) {
     try {
       const refreshed = await refreshAccessToken(stored.refresh_token);
       refreshed.user_email = stored.user_email;
-      await saveTokens(refreshed);
+      await saveTokens(uid, refreshed);
       return { token: refreshed.access_token, email: refreshed.user_email };
     } catch (error) {
       console.error('Failed to refresh token:', error);
@@ -156,60 +147,42 @@ export async function getValidAccessToken(): Promise<{ token: string; email: str
   return { token: stored.access_token, email: stored.user_email };
 }
 
-// ── Check if Outlook is connected ──
-export async function isOutlookConnected(): Promise<{ connected: boolean; email: string }> {
-  const tokenInfo = await getValidAccessToken();
-  return {
-    connected: !!tokenInfo,
-    email: tokenInfo?.email || '',
-  };
+// ── Check if Outlook is connected for a user ──
+export async function isOutlookConnected(uid: string): Promise<{ connected: boolean; email: string }> {
+  const tokenInfo = await getValidAccessToken(uid);
+  return { connected: !!tokenInfo, email: tokenInfo?.email || '' };
 }
 
 // ── Disconnect (remove tokens) ──
-export async function disconnectOutlook(): Promise<void> {
-  const ref = doc(db, SETTINGS_COLLECTION, TOKEN_DOC);
+export async function disconnectOutlook(uid: string): Promise<void> {
+  const ref = doc(db, `users/${uid}/settings`, 'outlook_tokens');
   await setDoc(ref, { disconnected: true });
 }
 
 // ═══ CALENDAR OPERATIONS ═══
 
-export async function createCalendarEvent(event: CalendarEvent): Promise<string | null> {
-  const tokenInfo = await getValidAccessToken();
-  if (!tokenInfo) {
-    console.error('No valid access token');
-    return null;
-  }
+export async function createCalendarEvent(uid: string, event: CalendarEvent): Promise<string | null> {
+  const tokenInfo = await getValidAccessToken(uid);
+  if (!tokenInfo) { console.error('No valid access token'); return null; }
 
   const token = tokenInfo.token?.trim();
-  if (!token) {
-    console.error('No valid access token string');
-    return null;
-  }
-  console.log('Creating calendar event:', JSON.stringify(event, null, 2));
-  console.log('Token length:', token.length);
+  if (!token) { console.error('No valid access token string'); return null; }
 
   try {
     const response = await fetch('https://graph.microsoft.com/v1.0/me/events', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(event),
       cache: 'no-store',
     });
 
-    const responseText = await response.text();
-    console.log('Graph API status:', response.status);
-    console.log('Graph API body:', responseText.substring(0, 500));
-
     if (!response.ok) {
-      console.error('Graph API error:', response.status, responseText);
+      const error = await response.text();
+      console.error('Graph API error:', response.status, error);
       return null;
     }
 
-    const data = JSON.parse(responseText);
+    const data = await response.json();
     return data.id;
   } catch (err) {
     console.error('Fetch error:', err);
@@ -217,16 +190,13 @@ export async function createCalendarEvent(event: CalendarEvent): Promise<string 
   }
 }
 
-export async function updateCalendarEvent(eventId: string, event: Partial<CalendarEvent>): Promise<boolean> {
-  const tokenInfo = await getValidAccessToken();
+export async function updateCalendarEvent(uid: string, eventId: string, event: Partial<CalendarEvent>): Promise<boolean> {
+  const tokenInfo = await getValidAccessToken(uid);
   if (!tokenInfo) return false;
 
   const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${tokenInfo.token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${tokenInfo.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(event),
     cache: 'no-store',
   });
@@ -236,12 +206,11 @@ export async function updateCalendarEvent(eventId: string, event: Partial<Calend
     console.error('Failed to update calendar event:', error);
     return false;
   }
-
   return true;
 }
 
-export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
-  const tokenInfo = await getValidAccessToken();
+export async function deleteCalendarEvent(uid: string, eventId: string): Promise<boolean> {
+  const tokenInfo = await getValidAccessToken(uid);
   if (!tokenInfo) return false;
 
   const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
@@ -255,36 +224,27 @@ export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
     console.error('Failed to delete calendar event:', error);
     return false;
   }
-
   return true;
 }
 
 // ═══ JOB → CALENDAR EVENT CONVERSION ═══
 
 export function jobToCalendarEvent(job: {
-  jobNumber: string;
-  company: string;
-  address: string;
-  onSiteTime: string;
-  ktiTime: string;
-  date: string;
-  scope: string;
-  notes: string;
+  jobNumber: string; company: string; address: string;
+  onSiteTime: string; ktiTime: string; date: string;
+  scope: string; notes: string;
 }): CalendarEvent {
-  let hours = 9;
-  let minutes = 0;
+  let hours = 9, minutes = 0;
   const ampmMatch = job.onSiteTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
   const militaryMatch = job.onSiteTime.match(/^(\d{1,2}):(\d{2})$/);
 
   if (ampmMatch) {
-    hours = parseInt(ampmMatch[1]);
-    minutes = parseInt(ampmMatch[2]);
+    hours = parseInt(ampmMatch[1]); minutes = parseInt(ampmMatch[2]);
     const ampm = ampmMatch[3].toUpperCase();
     if (ampm === 'PM' && hours !== 12) hours += 12;
     if (ampm === 'AM' && hours === 12) hours = 0;
   } else if (militaryMatch) {
-    hours = parseInt(militaryMatch[1]);
-    minutes = parseInt(militaryMatch[2]);
+    hours = parseInt(militaryMatch[1]); minutes = parseInt(militaryMatch[2]);
   }
 
   const ktiMatch = job.ktiTime.match(/(\d+)/);
@@ -303,10 +263,7 @@ export function jobToCalendarEvent(job: {
 
   return {
     subject: `${job.jobNumber} — ${job.company}`,
-    body: {
-      contentType: 'Text',
-      content: bodyParts.join('\n'),
-    },
+    body: { contentType: 'Text', content: bodyParts.join('\n') },
     start: { dateTime: formatDT(startDate), timeZone: 'America/Chicago' },
     end: { dateTime: formatDT(endDate), timeZone: 'America/Chicago' },
     location: { displayName: job.address },
