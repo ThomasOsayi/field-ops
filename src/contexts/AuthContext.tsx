@@ -35,8 +35,6 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-const googleProvider = new GoogleAuthProvider();
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+    // Create a fresh provider each time with prompt: 'select_account'
+    // This forces the account picker to show every time
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await signInWithPopup(auth, provider);
   };
 
   const logout = async () => {
