@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getUidSafe } from '@/lib/auth-helpers';
 import Sidebar from '@/components/Sidebar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { connectOutlook, disconnectOutlookClient, checkOutlookConnection } from '@/lib/outlook-sync';
 
 interface SyncEvent { id: string; message: string; detail: string; status: 'ok' | 'warn'; }
-const SYNC_SETTINGS_DOC = 'sync_settings';
-const SETTINGS_COLLECTION = 'settings';
 
 export default function IntegrationsPage() {
   const [configOpen, setConfigOpen] = useState(false);
@@ -25,21 +24,52 @@ export default function IntegrationsPage() {
   const [removeOnComplete, setRemoveOnComplete] = useState(false);
   const [includeNotes, setIncludeNotes] = useState(true);
 
-  useEffect(() => {
-    const check = async () => {
+  // Connection check with retry — auth may not be ready after OAuth redirect
+  const checkWithRetry = useCallback(async (retries = 4): Promise<void> => {
+    for (let i = 0; i < retries; i++) {
       const status = await checkOutlookConnection();
-      setConnected(status.connected); setEmail(status.email); setChecking(false);
-    };
-    check();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('connected') === 'true') { setConnected(true); window.history.replaceState({}, '', '/integrations'); }
-    if (params.get('error')) { console.error('OAuth error:', params.get('error')); window.history.replaceState({}, '', '/integrations'); }
+      if (status.connected) {
+        setConnected(true);
+        setEmail(status.email);
+        setChecking(false);
+        return;
+      }
+      if (i < retries - 1) await new Promise(r => setTimeout(r, 1200));
+    }
+    setChecking(false);
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('connected') === 'true') {
+      // Just came back from OAuth — set connected immediately, then verify in background
+      setConnected(true);
+      setChecking(false);
+      window.history.replaceState({}, '', '/integrations');
+      // Background check to get email (don't override connected state)
+      checkWithRetry(4).then(() => {});
+      return;
+    }
+
+    if (params.get('error')) {
+      console.error('OAuth error:', params.get('error'));
+      window.history.replaceState({}, '', '/integrations');
+      setChecking(false);
+      return;
+    }
+
+    // Normal page load
+    checkWithRetry(4);
+  }, [checkWithRetry]);
+
+  // Load sync settings from per-user path
+  useEffect(() => {
     const loadSettings = async () => {
+      const uid = getUidSafe();
+      if (!uid) return;
       try {
-        const ref = doc(db, SETTINGS_COLLECTION, SYNC_SETTINGS_DOC);
+        const ref = doc(db, `users/${uid}/settings`, 'sync_settings');
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
@@ -54,16 +84,22 @@ export default function IntegrationsPage() {
   }, []);
 
   const saveSyncSettings = async (updates: Record<string, boolean>) => {
-    try { await setDoc(doc(db, SETTINGS_COLLECTION, SYNC_SETTINGS_DOC), updates, { merge: true }); } catch (err) { console.error('Failed to save sync settings:', err); }
+    const uid = getUidSafe();
+    if (!uid) return;
+    try { await setDoc(doc(db, `users/${uid}/settings`, 'sync_settings'), updates, { merge: true }); }
+    catch (err) { console.error('Failed to save sync settings:', err); }
   };
   const toggleSetting = (key: string, current: boolean, setter: (v: boolean) => void) => { const nv = !current; setter(nv); saveSyncSettings({ [key]: nv }); };
 
+  // Fetch stats from per-user paths
   useEffect(() => {
     const fetchStats = async () => {
+      const uid = getUidSafe();
+      if (!uid) return;
       try {
-        const mappingsSnap = await getDocs(collection(db, 'outlook_event_mappings'));
+        const mappingsSnap = await getDocs(collection(db, `users/${uid}/outlook_event_mappings`));
         setEventCount(mappingsSnap.size);
-        const notifsQ = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(30));
+        const notifsQ = query(collection(db, `users/${uid}/notifications`), orderBy('createdAt', 'desc'), limit(30));
         const notifsSnap = await getDocs(notifsQ);
         const history: SyncEvent[] = [];
         let latestSyncTime: Date | null = null;
@@ -82,7 +118,7 @@ export default function IntegrationsPage() {
         if (latestSyncTime) setLastSyncLabel(timeAgo(latestSyncTime));
       } catch (err) { console.error('Failed to fetch integration stats:', err); }
     };
-    fetchStats();
+    if (connected) fetchStats();
   }, [connected]);
 
   const formatSyncDate = (date: Date) => {
@@ -131,7 +167,6 @@ export default function IntegrationsPage() {
       <div className="intg-page">
         <Sidebar />
         <div className="intg-main app-main">
-          {/* ── Header ── */}
           <header className="intg-topbar">
             <div className="intg-topbar-desktop">
               <div>
@@ -152,13 +187,11 @@ export default function IntegrationsPage() {
             {checking ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)', fontSize: '14px' }}>Checking connection…</div>
             ) : (<>
-              {/* Mobile page title (below header) */}
               <div className="intg-mobile-title">
                 <div style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '4px' }}>Integrations</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Connect FieldOps with your tools</div>
               </div>
 
-              {/* Outlook card */}
               <div className="intg-cards">
                 <div onClick={() => connected ? setConfigOpen(true) : handleConnect()} className="intg-outlook-card"
                   onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-hover)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)'; }}
@@ -181,14 +214,13 @@ export default function IntegrationsPage() {
                       <div><div style={{ fontFamily: 'var(--mono)', fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>0</div><div className="intg-stat-label">Errors</div></div>
                     </div>
                   ) : (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 700, background: 'linear-gradient(135deg, #4C9EEB, #7B61FF)', color: '#fff', boxShadow: '0 4px 16px rgba(76,158,235,0.3)' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 700, background: 'var(--gradient-accent)', color: '#fff', boxShadow: '0 4px 16px rgba(76,158,235,0.3)' }}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '16px', height: '16px' }}><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,7 12,13 2,7"/></svg>Connect Outlook
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* About */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>About Integrations
@@ -201,7 +233,6 @@ export default function IntegrationsPage() {
           </main>
         </div>
 
-        {/* ═══ CONFIG PANEL ═══ */}
         {configOpen && <>
           <div onClick={() => setConfigOpen(false)} className="intg-panel-overlay panel-overlay" />
           <div className="intg-config-panel slide-panel">
@@ -284,7 +315,6 @@ export default function IntegrationsPage() {
         .intg-page { display: flex; min-height: 100vh; background: var(--bg-void); }
         .intg-main { margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; min-height: 100vh; min-width: 0; overflow: hidden; }
         .intg-content { padding: 28px 32px; flex: 1; }
-
         .intg-topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); position: sticky; top: 0; z-index: 50; }
         .intg-topbar-desktop { display: flex; }
         .intg-topbar-mobile { display: none; }
@@ -292,13 +322,10 @@ export default function IntegrationsPage() {
         .intg-topbar-title-m { font-size: 16px; font-weight: 700; }
         .intg-back-btn { display: flex; align-items: center; gap: 4px; color: var(--accent-bright); font-size: 14px; font-weight: 600; background: none; border: none; cursor: pointer; padding: 8px 4px; -webkit-tap-highlight-color: transparent; }
         .intg-mobile-title { display: none; }
-
         .intg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 32px; }
         .intg-outlook-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .intg-outlook-stats { display: flex; gap: 20px; }
         .intg-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
-
-        /* Config panel */
         .intg-panel-overlay { position: fixed; inset: 0; background: rgba(6,8,12,0.7); backdrop-filter: blur(4px); z-index: 200; }
         .intg-config-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 620px; background: var(--bg-sidebar); border-left: 1px solid var(--border); z-index: 300; display: flex; flex-direction: column; }
         .intg-config-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -311,48 +338,31 @@ export default function IntegrationsPage() {
         .intg-config-sections { padding: 24px 28px; }
         .intg-config-footer { padding: 18px 28px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .intg-config-footer-right { display: flex; gap: 10px; }
-
         .intg-btn-disconnect { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; background: var(--danger-muted); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
         .intg-btn-close { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
-        .intg-btn-sync { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #4C9EEB, #7B61FF); color: #fff; border: none; box-shadow: 0 4px 16px rgba(76,158,235,0.3); }
-
-        /* ═══ MOBILE ═══ */
+        .intg-btn-sync { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; background: var(--gradient-accent); color: #fff; border: none; box-shadow: 0 4px 16px rgba(76,158,235,0.3); }
         @media (max-width: 768px) {
           .intg-main { margin-left: 0; }
           .intg-content { padding: 16px; padding-bottom: calc(var(--tabbar-height) + 16px); }
-
           .intg-topbar { padding: 12px 16px; }
           .intg-topbar-desktop { display: none; }
           .intg-topbar-mobile { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-
           .intg-mobile-title { display: block; margin-bottom: 20px; }
-
           .intg-cards { grid-template-columns: 1fr; }
           .intg-outlook-card { padding: 20px 16px; }
           .intg-outlook-stats { gap: 16px; }
-
-          /* Config panel → full screen */
           .intg-config-panel { width: 100% !important; border-left: none; }
           .intg-panel-overlay { backdrop-filter: none; }
           .intg-config-header { padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top, 12px)); }
           .intg-config-header-desktop { display: none; }
           .intg-config-header-mobile { display: flex; align-items: center; gap: 12px; flex: 1; }
           .intg-config-sections { padding: 16px 16px 120px; }
-          .intg-config-footer {
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 310;
-            background: var(--bg-sidebar); padding: 12px 16px;
-            padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
-          }
+          .intg-config-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 310; background: var(--bg-sidebar); padding: 12px 16px; padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)); }
           .intg-btn-disconnect { font-size: 11px; padding: 10px 10px; min-height: 44px; }
           .intg-btn-close { flex: 1; justify-content: center; min-height: 48px; }
           .intg-btn-sync { flex: 1.2; justify-content: center; min-height: 48px; }
         }
-
-        @media (max-width: 390px) {
-          .intg-content { padding: 12px; padding-bottom: calc(var(--tabbar-height) + 12px); }
-          .intg-outlook-card { padding: 16px 14px; }
-        }
-
+        @media (max-width: 390px) { .intg-content { padding: 12px; padding-bottom: calc(var(--tabbar-height) + 12px); } .intg-outlook-card { padding: 16px 14px; } }
         select option { background: var(--bg-card); color: var(--text-primary); }
       `}</style>
     </ProtectedRoute>
