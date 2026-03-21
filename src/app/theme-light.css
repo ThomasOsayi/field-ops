@@ -1,0 +1,79 @@
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE THEME
+   Loaded separately to avoid Tailwind v4 @import processing.
+   Applied via data-theme="light" on <html>
+   ═══════════════════════════════════════════════════════ */
+
+   [data-theme="light"] {
+    --bg-void: #F0F2F5 !important;
+    --bg-app: #F7F8FA !important;
+    --bg-sidebar: #FFFFFF !important;
+    --bg-surface: #F3F4F6 !important;
+    --bg-card: #FFFFFF !important;
+    --bg-elevated: #F9FAFB !important;
+    --bg-input: #F3F4F6 !important;
+    --bg-hover: #EEF0F4 !important;
+    --border: #E2E5EB !important;
+    --border-hover: #CBD0D8 !important;
+    --border-focus: #3B82F6 !important;
+    --text-primary: #111827 !important;
+    --text-secondary: #4B5563 !important;
+    --text-muted: #9CA3AF !important;
+    --accent: #3B82F6 !important;
+    --accent-bright: #2563EB !important;
+    --accent-dim: #60A5FA !important;
+    --accent-glow: rgba(59,130,246,0.08) !important;
+    --accent-glow-strong: rgba(59,130,246,0.14) !important;
+    --gradient-accent: linear-gradient(135deg, #3B82F6, #6366F1) !important;
+    --gradient-subtle: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.03)) !important;
+    --success: #059669 !important;
+    --success-muted: rgba(5,150,105,0.08) !important;
+    --warning: #D97706 !important;
+    --warning-muted: rgba(217,119,6,0.08) !important;
+    --danger: #DC2626 !important;
+    --danger-muted: rgba(220,38,38,0.06) !important;
+    --purple: #7C3AED !important;
+    --purple-muted: rgba(124,58,237,0.08) !important;
+    --orange: #EA580C !important;
+    --orange-muted: rgba(234,88,12,0.08) !important;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06) !important;
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08) !important;
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.1) !important;
+  }
+  
+  /* Light mode: gradient text uses darker gradient */
+  [data-theme="light"] .gradient-text {
+    background: linear-gradient(135deg, #3B82F6, #6366F1) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+  
+  /* Light mode: scrollbar colors */
+  [data-theme="light"] * {
+    scrollbar-color: #CBD0D8 transparent !important;
+  }
+  [data-theme="light"] *::-webkit-scrollbar-thumb {
+    background: #CBD0D8 !important;
+  }
+  
+  /* Light mode: select dropdowns */
+  [data-theme="light"] select option {
+    background: #FFFFFF;
+    color: #111827;
+  }
+  
+  /* Light mode: overlays need lighter dim */
+  [data-theme="light"] .panel-overlay,
+  [data-theme="light"] .cdp-overlay,
+  [data-theme="light"] .ncp-overlay,
+  [data-theme="light"] .doc-panel-overlay,
+  [data-theme="light"] .intg-panel-overlay,
+  [data-theme="light"] .ps-overlay {
+    background: rgba(0,0,0,0.25) !important;
+  }
+  
+  /* Light mode: bottom sheet shadow */
+  [data-theme="light"] .ps-sheet {
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.12) !important;
+  }

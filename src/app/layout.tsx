@@ -3,6 +3,7 @@ import { DM_Sans, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import './globals.css';
+import './theme-light.css';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
