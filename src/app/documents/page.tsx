@@ -486,26 +486,22 @@ export default function DocumentsPage() {
             .doc-main { margin-left: 0; }
             .doc-content { padding: 16px; padding-bottom: calc(var(--tabbar-height) + 16px); }
 
-            /* Stats → horizontal scroll */
+            /* Stats → 2×2 grid */
             .doc-stats {
-              display: flex; gap: 10px; margin-bottom: 16px;
-              overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
+              display: grid; grid-template-columns: 1fr 1fr;
+              gap: 8px; margin-bottom: 16px;
             }
-            .doc-stats::-webkit-scrollbar { display: none; }
-            .doc-stats > div { flex-shrink: 0; width: 145px; }
+            .doc-stats > div { width: auto; }
 
             /* Toolbar → stack */
             .doc-toolbar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
             .doc-toolbar-left { flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
             .doc-toolbar-title { font-size: 15px; display: flex; align-items: center; justify-content: space-between; width: 100%; }
-            .doc-filters {
-              width: 100%; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; padding-bottom: 2px;
-            }
-            .doc-filters::-webkit-scrollbar { display: none; }
+            .doc-filters { flex-wrap: wrap; gap: 6px; }
             .doc-pill { flex-shrink: 0; }
 
-            /* View toggle → next to title */
-            .doc-view-toggle { position: absolute; right: 16px; }
+            /* View toggle → hidden on mobile */
+            .doc-view-toggle { display: none; }
             .doc-toolbar { position: relative; }
 
             /* Grid → 2 columns */
@@ -551,7 +547,6 @@ export default function DocumentsPage() {
             .doc-content { padding: 12px; padding-bottom: calc(var(--tabbar-height) + 12px); }
             .doc-grid { gap: 8px; }
             .doc-grid-thumb { height: 100px; }
-            .doc-stats > div { width: 130px; }
           }
 
           @keyframes spin { to { transform: rotate(360deg); } }
