@@ -31,7 +31,6 @@ export default function JobsPage() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Filter jobs by search query
   const filteredJobs = useMemo(() => {
     if (!searchQuery.trim()) return jobs;
     const q = searchQuery.toLowerCase();
@@ -45,19 +44,16 @@ export default function JobsPage() {
     );
   }, [jobs, searchQuery]);
 
-  // Export to CSV
   const handleExport = () => {
     const headers = ['Job #', 'Company', 'Address', 'Contact', 'Phone', 'KTI', 'On Site', 'Date', 'Status', 'Scope', 'Notes'];
     const rows = filteredJobs.map(j => [
       j.jobNumber, j.company, j.address, j.contactName, j.contactPhone,
       j.ktiTime, j.onSiteTime, j.date, j.status, j.scope, j.notes,
     ]);
-
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
     ].join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -73,11 +69,11 @@ export default function JobsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="jobs-page">
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)' }}>
         <Sidebar />
-        <div className="jobs-main app-main">
+        <div className="main-content">
           <Topbar onNewJob={handleNewJob} onSearch={setSearchQuery} onExport={handleExport} />
-          <main className="jobs-content">
+          <main className="main-body">
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '256px', color: 'var(--text-muted)', fontSize: '14px' }}>Loading jobs…</div>
             ) : (
@@ -98,15 +94,8 @@ export default function JobsPage() {
         <NewJobPanel open={newJobOpen} onClose={() => setNewJobOpen(false)} onJobCreated={() => {}} editJob={editJob} />
         <DetailPanel open={detailOpen} job={selectedJob} onClose={() => setDetailOpen(false)} onEdit={handleEditClick} onJobUpdated={() => {}} />
       </div>
-
       <style>{`
-        .jobs-page {
-          display: flex;
-          min-height: 100vh;
-          background: var(--bg-void);
-        }
-
-        .jobs-main {
+        .main-content {
           margin-left: var(--sidebar-width);
           flex: 1;
           display: flex;
@@ -115,27 +104,16 @@ export default function JobsPage() {
           min-width: 0;
           overflow: hidden;
         }
-
-        .jobs-content {
+        .main-body {
           padding: 28px 32px;
           flex: 1;
         }
-
         @media (max-width: 768px) {
-          .jobs-main {
+          .main-content {
             margin-left: 0;
           }
-
-          .jobs-content {
-            padding: 16px;
-            padding-bottom: calc(var(--tabbar-height) + 16px);
-          }
-        }
-
-        @media (max-width: 390px) {
-          .jobs-content {
-            padding: 12px;
-            padding-bottom: calc(var(--tabbar-height) + 12px);
+          .main-body {
+            padding: 16px 16px 100px;
           }
         }
       `}</style>

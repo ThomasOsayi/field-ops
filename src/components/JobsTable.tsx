@@ -51,23 +51,10 @@ export default function JobsTable({ jobs, onRowClick, onEditClick }: JobsTablePr
     setMenuJob(menuJob?.id === job.id ? null : job);
   };
 
-  const handleMarkComplete = async (job: Job) => {
-    setMenuJob(null);
-    await markJobCompleteWithSync(job);
-  };
+  const handleMarkComplete = async (job: Job) => { setMenuJob(null); await markJobCompleteWithSync(job); };
+  const handleDelete = async (job: Job) => { setMenuJob(null); if (!confirm(`Delete ${job.jobNumber} — ${job.company}? This cannot be undone.`)) return; await deleteJob(job.id); };
 
-  const handleDelete = async (job: Job) => {
-    setMenuJob(null);
-    if (!confirm(`Delete ${job.jobNumber} — ${job.company}? This cannot be undone.`)) return;
-    await deleteJob(job.id);
-  };
-
-  const menuItemStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px',
-    fontWeight: 600, cursor: 'pointer', transition: 'background 0.1s', borderRadius: '6px',
-    color: 'var(--text-secondary)', border: 'none', background: 'transparent', width: '100%',
-    fontFamily: 'var(--font)', textAlign: 'left',
-  };
+  const menuItemStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'background 0.1s', borderRadius: '6px', color: 'var(--text-secondary)', border: 'none', background: 'transparent', width: '100%', fontFamily: 'var(--font)', textAlign: 'left' };
 
   return (
     <>
@@ -135,7 +122,6 @@ export default function JobsTable({ jobs, onRowClick, onEditClick }: JobsTablePr
         <div className="jt-cards">
           {filtered.map(job => {
             const sc = statusConfig[job.status];
-            // Truncate long contact names for the meta row
             const shortContact = job.contactName.length > 14
               ? job.contactName.split(' ')[0] + ' ' + (job.contactName.split(' ')[1]?.[0] || '') + '.'
               : job.contactName;
@@ -172,264 +158,75 @@ export default function JobsTable({ jobs, onRowClick, onEditClick }: JobsTablePr
           )}
         </div>
 
-        {/* ── Context Menu (shared) ── */}
+        {/* ── Context Menu ── */}
         {menuJob && (
           <div ref={menuRef} style={{ position: 'fixed', left: menuPos.x, top: menuPos.y, width: '180px', background: 'var(--bg-sidebar)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 500, padding: '4px', overflow: 'hidden' }}>
             <button style={menuItemStyle} onClick={() => { const j = menuJob; setMenuJob(null); onRowClick(j); }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              View Detail
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View Detail
             </button>
             <button style={menuItemStyle} onClick={() => { const j = menuJob; setMenuJob(null); onEditClick(j); }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit Job
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Job
             </button>
             {menuJob.status !== 'completed' && (<>
               <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
               <button style={menuItemStyle} onClick={() => handleMarkComplete(menuJob)}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--success-muted)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--success)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><polyline points="20 6 9 17 4 12"/></svg>
-                Mark Complete
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><polyline points="20 6 9 17 4 12"/></svg>Mark Complete
               </button>
             </>)}
             <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
             <button style={{ ...menuItemStyle, color: 'var(--danger)' }} onClick={() => handleDelete(menuJob)}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--danger-muted)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Delete Job
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete Job
             </button>
           </div>
         )}
       </div>
 
       <style>{`
-        /* ═══ TOOLBAR ═══ */
-        .jt-toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-        }
+        .jt-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .jt-toolbar-title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+        .jt-filters { display: flex; gap: 6px; }
+        .jt-pill { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); background: transparent; border: 1px solid var(--border); color: var(--text-secondary); transition: all 0.15s; white-space: nowrap; }
+        .jt-pill:hover { border-color: var(--border-hover); color: var(--text-primary); }
+        .jt-pill-active { background: var(--accent-glow-strong); border-color: rgba(76,158,235,0.3); color: var(--accent-bright); }
+        .jt-pill-count { font-family: var(--mono); font-size: 10px; font-weight: 700; opacity: 0.6; }
+        .jt-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .jt-cards { display: none; }
 
-        .jt-toolbar-title {
-          font-size: 16px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-        }
-
-        .jt-filters {
-          display: flex;
-          gap: 6px;
-        }
-
-        .jt-pill {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          padding: 6px 14px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          font-family: var(--font);
-          background: transparent;
-          border: 1px solid var(--border);
-          color: var(--text-secondary);
-          transition: all 0.15s;
-          white-space: nowrap;
-        }
-        .jt-pill:hover {
-          border-color: var(--border-hover);
-          color: var(--text-primary);
-        }
-        .jt-pill-active {
-          background: var(--accent-glow-strong);
-          border-color: rgba(76,158,235,0.3);
-          color: var(--accent-bright);
-        }
-
-        .jt-pill-count {
-          font-family: var(--mono);
-          font-size: 10px;
-          font-weight: 700;
-          opacity: 0.6;
-        }
-
-        /* ═══ DESKTOP TABLE ═══ */
-        .jt-table-wrap {
-          background: var(--bg-card);
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
-          overflow: hidden;
-        }
-
-        /* ═══ MOBILE CARDS — hidden on desktop ═══ */
-        .jt-cards {
-          display: none;
-        }
-
-        /* ═══ MOBILE — ≤768px ═══ */
         @media (max-width: 768px) {
-          /* Toolbar: stack title above scrollable pills */
-          .jt-toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 12px;
-          }
-
-          .jt-toolbar-title {
-            font-size: 15px;
-          }
-
-          /* Filters: horizontal scroll */
-          .jt-filters {
-            width: 100%;
-            overflow-x: auto;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            padding-bottom: 2px;
-          }
-          .jt-filters::-webkit-scrollbar { display: none; }
-
-          .jt-pill {
-            flex-shrink: 0;
-          }
-
-          /* Hide desktop table */
-          .jt-table-wrap {
-            display: none;
-          }
-
-          /* Show mobile cards */
-          .jt-cards {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-          }
-
-          .jt-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 14px 16px;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            transition: background 0.15s;
-          }
-          .jt-card:active {
-            background: var(--bg-hover);
-          }
-
-          /* Left color bar */
-          .jt-card-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 3px;
-          }
-
-          .jt-card-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-          }
-
-          .jt-card-jobnum {
-            font-family: var(--mono);
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--accent);
-          }
-
-          .jt-card-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 9px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-          }
-
-          .jt-card-bdot {
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: currentColor;
-          }
-
-          .jt-card-company {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 2px;
-          }
-
-          .jt-card-addr {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .jt-card-meta {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-          }
-
-          .jt-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            color: var(--text-secondary);
-          }
-          .jt-meta-item svg {
-            width: 12px;
-            height: 12px;
-            color: var(--text-muted);
-            flex-shrink: 0;
-          }
-
-          .jt-meta-val {
-            font-family: var(--mono);
-            font-weight: 600;
-            white-space: nowrap;
-          }
+          .jt-toolbar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+          .jt-toolbar-title { font-size: 15px; }
+          .jt-filters { flex-wrap: wrap; gap: 6px; }
+          .jt-pill { padding: 6px 12px; font-size: 12px; flex-shrink: 0; }
+          .jt-table-wrap { display: none; }
+          .jt-cards { display: flex; flex-direction: column; gap: 10px; }
+          .jt-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 18px; position: relative; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
+          .jt-card:active { background: var(--bg-hover); }
+          .jt-card-bar { position: absolute; top: 0; left: 0; bottom: 0; width: 4px; }
+          .jt-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+          .jt-card-jobnum { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+          .jt-card-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+          .jt-card-bdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+          .jt-card-company { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 2px; }
+          .jt-card-addr { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .jt-card-meta { display: flex; align-items: center; gap: 16px; padding-top: 10px; border-top: 1px solid var(--border); }
+          .jt-meta-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+          .jt-meta-item svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+          .jt-meta-val { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
         }
 
-        /* ═══ SMALL MOBILE — ≤390px ═══ */
         @media (max-width: 390px) {
-          .jt-card {
-            padding: 12px 14px;
-          }
-
-          .jt-card-company {
-            font-size: 14px;
-          }
-
-          .jt-card-meta {
-            gap: 10px;
-          }
-
-          .jt-meta-item {
-            font-size: 10px;
-          }
+          .jt-card { padding: 14px 16px; }
+          .jt-card-company { font-size: 15px; }
+          .jt-card-meta { gap: 12px; }
+          .jt-meta-item { font-size: 11px; }
         }
       `}</style>
     </>
