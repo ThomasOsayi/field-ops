@@ -95,10 +95,12 @@ export default function IntegrationsPage() {
   useEffect(() => {
     const fetchStats = async () => {
       const uid = getUidSafe();
-      if (!uid) return;
       try {
-        const mappingsSnap = await getDocs(collection(db, `users/${uid}/outlook_event_mappings`));
+        const mappingsSnap = uid
+          ? await getDocs(collection(db, `users/${uid}/outlook_event_mappings`))
+          : { size: 0 };
         setEventCount(mappingsSnap.size);
+        if (!uid) return;
         const notifsQ = query(collection(db, `users/${uid}/notifications`), orderBy('createdAt', 'desc'), limit(30));
         const notifsSnap = await getDocs(notifsQ);
         const history: SyncEvent[] = [];

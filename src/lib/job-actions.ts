@@ -112,14 +112,14 @@ export async function createJobWithSync(job: NewJob): Promise<string> {
   const id = await createJob(job);
 
   // 2. Auto-create/update company in contacts (fire and forget)
-  ensureCompanyFromJob(job).catch(() => {});
+  ensureCompanyFromJob(job).catch(e => console.error('Company sync from job failed:', e));
 
   // 3. Sync to Outlook
   const fullJob: Job = { ...job, id, createdAt: new Date().toISOString() };
-  syncJobToOutlook(fullJob, 'create').catch(() => {});
+  syncJobToOutlook(fullJob, 'create').catch(e => console.error('Outlook sync failed:', e));
 
   // 4. Create notification
-  notifyJobCreated(job.jobNumber, job.company).catch(() => {});
+  notifyJobCreated(job.jobNumber, job.company).catch(e => console.error('Notification failed:', e));
 
   return id;
 }
@@ -139,11 +139,11 @@ export async function updateJobWithSync(
 
   // 2. Sync to Outlook
   const updatedJob = { ...fullJob, ...data };
-  syncJobToOutlook(updatedJob as Job, 'update').catch(() => {});
+  syncJobToOutlook(updatedJob as Job, 'update').catch(e => console.error('Outlook sync failed:', e));
 
   // 3. Notify on status change
   if (data.status && data.status !== oldStatus) {
-    notifyJobStatusChanged(fullJob.jobNumber, fullJob.company, data.status).catch(() => {});
+    notifyJobStatusChanged(fullJob.jobNumber, fullJob.company, data.status).catch(e => console.error('Notification failed:', e));
   }
 }
 
@@ -155,8 +155,8 @@ export async function markJobCompleteWithSync(job: Job): Promise<void> {
   await markJobComplete(job.id);
 
   // 2. Delete from Outlook
-  syncJobToOutlook(job, 'delete').catch(() => {});
+  syncJobToOutlook(job, 'delete').catch(e => console.error('Outlook sync failed:', e));
 
   // 3. Notify
-  notifyJobStatusChanged(job.jobNumber, job.company, 'completed').catch(() => {});
+  notifyJobStatusChanged(job.jobNumber, job.company, 'completed').catch(e => console.error('Notification failed:', e));
 }

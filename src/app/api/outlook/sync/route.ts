@@ -9,22 +9,21 @@ import {
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-// Store Outlook event IDs mapped to job IDs
-const MAPPING_COLLECTION = 'outlook_event_mappings';
+// Store Outlook event IDs mapped to job IDs under users/{uid}/outlook_event_mappings
 
-async function getEventId(jobId: string): Promise<string | null> {
-  const ref = doc(db, MAPPING_COLLECTION, jobId);
+async function getEventId(uid: string, jobId: string): Promise<string | null> {
+  const ref = doc(db, `users/${uid}/outlook_event_mappings`, jobId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data().eventId : null;
 }
 
-async function saveEventId(jobId: string, eventId: string): Promise<void> {
-  const ref = doc(db, MAPPING_COLLECTION, jobId);
+async function saveEventId(uid: string, jobId: string, eventId: string): Promise<void> {
+  const ref = doc(db, `users/${uid}/outlook_event_mappings`, jobId);
   await setDoc(ref, { eventId, updatedAt: new Date().toISOString() });
 }
 
-async function removeEventId(jobId: string): Promise<void> {
-  const ref = doc(db, MAPPING_COLLECTION, jobId);
+async function removeEventId(uid: string, jobId: string): Promise<void> {
+  const ref = doc(db, `users/${uid}/outlook_event_mappings`, jobId);
   await setDoc(ref, { eventId: null, removedAt: new Date().toISOString() });
 }
 
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'create' || action === 'update') {
       const calendarEvent = jobToCalendarEvent(job);
-      const existingEventId = await getEventId(job.id);
+      const existingEventId = await getEventId(uid, job.id);
 
       if (existingEventId) {
         // Update existing event
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
         // Create new event
         const eventId = await createCalendarEvent(uid, calendarEvent);
         if (eventId) {
-          await saveEventId(job.id, eventId);
+          await saveEventId(uid, job.id, eventId);
           return NextResponse.json({ success: true, action: 'created', eventId });
         }
         return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
@@ -62,10 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'delete') {
-      const eventId = await getEventId(job.id);
+      const eventId = await getEventId(uid, job.id);
       if (eventId) {
         const success = await deleteCalendarEvent(uid, eventId);
-        if (success) await removeEventId(job.id);
+        if (success) await removeEventId(uid, job.id);
         return NextResponse.json({ success, action: 'deleted' });
       }
       return NextResponse.json({ success: true, action: 'no_event' });
